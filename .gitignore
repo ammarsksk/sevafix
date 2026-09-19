@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.aws-sam/
+backend/.aws-sam/
+backend/titan-test-output.json
+artifacts/frontend-smoke-failure.png
+.env
+.env.*
+!.env.example

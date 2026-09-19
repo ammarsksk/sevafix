@@ -1,0 +1,13 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowSevaFixDeployerToAssume",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::851725360556:user/sevafix-deployer"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}

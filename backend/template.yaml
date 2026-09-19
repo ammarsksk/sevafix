@@ -1,0 +1,615 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SevaFix serverless backend - prepare, track, diagnose, and repair benefit applications.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedPattern: '[a-z0-9-]+'
+  AllowedOrigin:
+    Type: String
+    Default: http://localhost:3000
+  EnableMalwareProtection:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+  EnableKnowledgeBase:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+  BedrockModelId:
+    Type: String
+    Default: global.amazon.nova-2-lite-v1:0
+  BedrockMantleModelId:
+    Type: String
+    Default: openai.gpt-oss-20b
+
+Conditions:
+  MalwareEnabled: !Equals [!Ref EnableMalwareProtection, 'true']
+  KnowledgeBaseEnabled: !Equals [!Ref EnableKnowledgeBase, 'true']
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    CodeUri: src/
+    MemorySize: 512
+    Timeout: 30
+    Tracing: Active
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        TABLE_NAME: !Ref DataTable
+        CITIZEN_BUCKET: !Ref CitizenDocumentsBucket
+        POLICY_BUCKET: !Ref PolicyBucket
+        USER_POOL_ID: !Ref UserPool
+        ALLOWED_ORIGIN: !Ref AllowedOrigin
+        MALWARE_PROTECTION_ENABLED: !Ref EnableMalwareProtection
+        BEDROCK_MODEL_ID: !Ref BedrockModelId
+        BEDROCK_MANTLE_MODEL_ID: !Ref BedrockMantleModelId
+        BEDROCK_KNOWLEDGE_BASE_ID: !If [KnowledgeBaseEnabled, !Ref PolicyKnowledgeBase, '']
+        BEDROCK_DATA_SOURCE_ID: !If [KnowledgeBaseEnabled, !GetAtt PolicyDataSource.DataSourceId, '']
+        NOTIFICATION_TOPIC_ARN: !Ref NotificationTopic
+  HttpApi:
+    CorsConfiguration:
+      AllowOrigins: [!Ref AllowedOrigin]
+      AllowHeaders: [authorization, content-type, x-correlation-id]
+      AllowMethods: [GET, POST, PATCH, DELETE, OPTIONS]
+      MaxAge: 600
+
+Resources:
+  DataKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: SevaFix encryption key
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: RootAdministration
+            Effect: Allow
+            Principal: {AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'}
+            Action: 'kms:*'
+            Resource: '*'
+  DataKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/sevafix-${Environment}
+      TargetKeyId: !Ref DataKey
+
+  DataTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub SevaFix-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification: {SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: !Ref DataKey}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      TimeToLiveSpecification: {AttributeName: expiresAt, Enabled: true}
+      AttributeDefinitions:
+        - {AttributeName: PK, AttributeType: S}
+        - {AttributeName: SK, AttributeType: S}
+        - {AttributeName: GSI1PK, AttributeType: S}
+        - {AttributeName: GSI1SK, AttributeType: S}
+        - {AttributeName: GSI2PK, AttributeType: S}
+        - {AttributeName: GSI2SK, AttributeType: S}
+        - {AttributeName: GSI3PK, AttributeType: S}
+        - {AttributeName: GSI3SK, AttributeType: S}
+      KeySchema:
+        - {AttributeName: PK, KeyType: HASH}
+        - {AttributeName: SK, KeyType: RANGE}
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema: [{AttributeName: GSI1PK, KeyType: HASH}, {AttributeName: GSI1SK, KeyType: RANGE}]
+          Projection: {ProjectionType: ALL}
+        - IndexName: GSI2
+          KeySchema: [{AttributeName: GSI2PK, KeyType: HASH}, {AttributeName: GSI2SK, KeyType: RANGE}]
+          Projection: {ProjectionType: ALL}
+        - IndexName: GSI3
+          KeySchema: [{AttributeName: GSI3PK, KeyType: HASH}, {AttributeName: GSI3SK, KeyType: RANGE}]
+          Projection: {ProjectionType: ALL}
+
+  CitizenDocumentsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: aws:kms, KMSMasterKeyID: !GetAtt DataKey.Arn}
+            BucketKeyEnabled: true
+      VersioningConfiguration: {Status: Enabled}
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+      OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: [!Ref AllowedOrigin]
+            AllowedMethods: [PUT, GET]
+            AllowedHeaders: ['*']
+            ExposedHeaders: [ETag, x-amz-checksum-sha256]
+            MaxAge: 600
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload: {DaysAfterInitiation: 1}
+          - Id: ExpireNoncurrentVersions
+            Status: Enabled
+            NoncurrentVersionExpiration: {NoncurrentDays: 30}
+  CitizenBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CitizenDocumentsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: [!GetAtt CitizenDocumentsBucket.Arn, !Sub '${CitizenDocumentsBucket.Arn}/*']
+            Condition: {Bool: {'aws:SecureTransport': 'false'}}
+
+  PolicyBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: aws:kms, KMSMasterKeyID: !GetAtt DataKey.Arn}
+            BucketKeyEnabled: true
+      VersioningConfiguration: {Status: Enabled}
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+      OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
+  PolicyBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PolicyBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: [!GetAtt PolicyBucket.Arn, !Sub '${PolicyBucket.Arn}/*']
+            Condition: {Bool: {'aws:SecureTransport': 'false'}}
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub sevafix-${Environment}
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      AccountRecoverySetting:
+        RecoveryMechanisms: [{Name: verified_email, Priority: 1}]
+      MfaConfiguration: OPTIONAL
+      EnabledMfas: [SOFTWARE_TOKEN_MFA]
+      UserAttributeUpdateSettings: {AttributesRequireVerificationBeforeUpdate: [email]}
+      Policies:
+        PasswordPolicy: {MinimumLength: 10, RequireLowercase: true, RequireUppercase: true, RequireNumbers: true, RequireSymbols: true, TemporaryPasswordValidityDays: 3}
+      UserPoolAddOns: {AdvancedSecurityMode: AUDIT}
+      Schema:
+        - {Name: email, Required: true, Mutable: true}
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub sevafix-web-${Environment}
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH, ALLOW_USER_PASSWORD_AUTH]
+      AccessTokenValidity: 15
+      IdTokenValidity: 15
+      RefreshTokenValidity: 7
+      TokenValidityUnits: {AccessToken: minutes, IdToken: minutes, RefreshToken: days}
+  CitizenGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: {GroupName: citizen, Description: SevaFix citizens, UserPoolId: !Ref UserPool}
+  ReviewerGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: {GroupName: policy-reviewer, Description: Policy source reviewers, UserPoolId: !Ref UserPool}
+  AdminGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: {GroupName: admin, Description: SevaFix administrators, UserPoolId: !Ref UserPool}
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Environment
+      Auth:
+        DefaultAuthorizer: CognitoJwtAuthorizer
+        Authorizers:
+          CognitoJwtAuthorizer:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}/${UserPool}
+              audience: [!Ref UserPoolClient]
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","responseLatency":"$context.responseLatency","ip":"$context.identity.sourceIp"}'
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: {LogGroupName: !Sub '/aws/apigateway/sevafix-${Environment}', RetentionInDays: 30}
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub sevafix-${Environment}-api
+      Handler: api.app.lambda_handler
+      MemorySize: 768
+      Environment:
+        Variables:
+          DOCUMENT_STATE_MACHINE_ARN: !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:sevafix-${Environment}-document-pipeline
+          VALIDATION_FUNCTION_ARN: !GetAtt ValidationFunction.Arn
+          DIAGNOSIS_FUNCTION_ARN: !GetAtt DiagnosisFunction.Arn
+          DELETION_FUNCTION_ARN: !GetAtt DeletionFunction.Arn
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref DataTable}
+        - S3CrudPolicy: {BucketName: !Ref CitizenDocumentsBucket}
+        - S3WritePolicy: {BucketName: !Ref PolicyBucket}
+        - Statement:
+            - {Effect: Allow, Action: ['dynamodb:TransactWriteItems'], Resource: [!GetAtt DataTable.Arn, !Sub '${DataTable.Arn}/index/*']}
+            - {Effect: Allow, Action: ['kms:Decrypt', 'kms:Encrypt', 'kms:GenerateDataKey', 'kms:DescribeKey'], Resource: !GetAtt DataKey.Arn}
+            - {Effect: Allow, Action: ['states:StartExecution'], Resource: !Sub 'arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:sevafix-${Environment}-document-pipeline'}
+            - {Effect: Allow, Action: ['lambda:InvokeFunction'], Resource: [!GetAtt ValidationFunction.Arn, !GetAtt DiagnosisFunction.Arn, !GetAtt DeletionFunction.Arn]}
+            - {Effect: Allow, Action: ['bedrock:StartIngestionJob'], Resource: '*'}
+      Events:
+        CorsPreflight:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: '/{proxy+}'
+            Method: OPTIONS
+            Auth: {Authorizer: NONE}
+        Proxy:
+          Type: HttpApi
+          Properties: {ApiId: !Ref HttpApi, Path: '/{proxy+}', Method: ANY}
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /health
+            Method: GET
+            Auth: {Authorizer: NONE}
+
+  ValidationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub sevafix-${Environment}-validation
+      Handler: validation.handler.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref DataTable}
+        - Statement: [{Effect: Allow, Action: ['kms:Decrypt', 'kms:Encrypt', 'kms:GenerateDataKey', 'kms:DescribeKey'], Resource: !GetAtt DataKey.Arn}]
+
+  PipelineFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub sevafix-${Environment}-document-pipeline-worker
+      Handler: pipeline.handler.lambda_handler
+      Timeout: 60
+      MemorySize: 1024
+      Environment:
+        Variables:
+          DOCUMENT_STATE_MACHINE_ARN: !Sub arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:sevafix-${Environment}-document-pipeline
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref DataTable}
+        - S3CrudPolicy: {BucketName: !Ref CitizenDocumentsBucket}
+        - TextractPolicy: {}
+        - Statement:
+            - {Effect: Allow, Action: ['states:StartExecution'], Resource: !Sub 'arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:sevafix-${Environment}-document-pipeline'}
+            - {Effect: Allow, Action: ['kms:Decrypt', 'kms:Encrypt', 'kms:GenerateDataKey', 'kms:DescribeKey'], Resource: !GetAtt DataKey.Arn}
+
+  DiagnosisFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub sevafix-${Environment}-diagnosis
+      Handler: diagnosis.handler.lambda_handler
+      Timeout: 90
+      MemorySize: 768
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref DataTable}
+        - Statement:
+            - {Effect: Allow, Action: ['kms:Decrypt', 'kms:Encrypt', 'kms:GenerateDataKey', 'kms:DescribeKey'], Resource: !GetAtt DataKey.Arn}
+            - Effect: Allow
+              Action: ['bedrock:InvokeModel', 'bedrock:ApplyGuardrail']
+              Resource: '*'
+            - Effect: Allow
+              Action: ['bedrock-mantle:CreateInference']
+              Resource: '*'
+            - Effect: Allow
+              Action: ['bedrock:Retrieve']
+              Resource: '*'
+
+  SourceMonitorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub sevafix-${Environment}-source-monitor
+      Handler: source_monitor.handler.lambda_handler
+      Timeout: 300
+      MemorySize: 1024
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref DataTable}
+        - S3WritePolicy: {BucketName: !Ref PolicyBucket}
+        - Statement: [{Effect: Allow, Action: ['kms:Decrypt', 'kms:Encrypt', 'kms:GenerateDataKey', 'kms:DescribeKey'], Resource: !GetAtt DataKey.Arn}]
+      Events:
+        Daily:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: rate(1 day)
+            FlexibleTimeWindow: {Mode: FLEXIBLE, MaximumWindowInMinutes: 30}
+
+  DeletionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub sevafix-${Environment}-deletion
+      Handler: deletion.handler.lambda_handler
+      Timeout: 300
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref DataTable}
+        - S3CrudPolicy: {BucketName: !Ref CitizenDocumentsBucket}
+        - Statement:
+            - {Effect: Allow, Action: ['cognito-idp:ListUsers', 'cognito-idp:AdminDeleteUser'], Resource: !GetAtt UserPool.Arn}
+            - {Effect: Allow, Action: ['kms:Decrypt', 'kms:Encrypt', 'kms:GenerateDataKey', 'kms:DescribeKey'], Resource: !GetAtt DataKey.Arn}
+            - {Effect: Allow, Action: ['s3:ListBucketVersions'], Resource: !GetAtt CitizenDocumentsBucket.Arn}
+            - {Effect: Allow, Action: ['s3:DeleteObjectVersion'], Resource: !Sub '${CitizenDocumentsBucket.Arn}/*'}
+
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub sevafix-${Environment}-notifications
+      KmsMasterKeyId: alias/aws/sns
+  NotificationDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub sevafix-${Environment}-notifications-dlq
+      KmsMasterKeyId: alias/aws/sqs
+      MessageRetentionPeriod: 1209600
+  NotificationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub sevafix-${Environment}-notifications
+      KmsMasterKeyId: alias/aws/sqs
+      VisibilityTimeout: 180
+      RedrivePolicy: {deadLetterTargetArn: !GetAtt NotificationDeadLetterQueue.Arn, maxReceiveCount: 5}
+  NotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub sevafix-${Environment}-notification
+      Handler: notification.handler.lambda_handler
+      Policies:
+        - SQSPollerPolicy: {QueueName: !GetAtt NotificationQueue.QueueName}
+        - SNSPublishMessagePolicy: {TopicName: !GetAtt NotificationTopic.TopicName}
+      Events:
+        Queue:
+          Type: SQS
+          Properties: {Queue: !GetAtt NotificationQueue.Arn, BatchSize: 10, FunctionResponseTypes: [ReportBatchItemFailures]}
+
+  DocumentPipeline:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub sevafix-${Environment}-document-pipeline
+      Type: STANDARD
+      DefinitionSubstitutions:
+        PipelineArn: !GetAtt PipelineFunction.Arn
+        ValidationArn: !GetAtt ValidationFunction.Arn
+      Definition:
+        StartAt: StartTextract
+        States:
+          StartTextract:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: ${PipelineArn}
+              Payload:
+                action: start
+                documentId.$: $.documentId
+                applicationId.$: $.applicationId
+            OutputPath: $.Payload
+            Retry: [{ErrorEquals: [Lambda.ServiceException, Lambda.AWSLambdaException, Lambda.SdkClientException], IntervalSeconds: 2, MaxAttempts: 3, BackoffRate: 2}]
+            Next: WaitForTextract
+          WaitForTextract: {Type: Wait, Seconds: 5, Next: PollTextract}
+          PollTextract:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: ${PipelineArn}
+              Payload:
+                action: poll
+                documentId.$: $.documentId
+                applicationId.$: $.applicationId
+                ownerSub.$: $.ownerSub
+                textractJobId.$: $.textractJobId
+            OutputPath: $.Payload
+            Next: OcrState
+          OcrState:
+            Type: Choice
+            Choices:
+              - {Variable: $.ocrStatus, StringEquals: SUCCEEDED, Next: ValidateApplication}
+              - {Variable: $.ocrStatus, StringEquals: FAILED, Next: OcrFailed}
+            Default: WaitForTextract
+          ValidateApplication:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: ${ValidationArn}
+              Payload:
+                applicationId.$: $.applicationId
+                ownerSub.$: $.ownerSub
+            OutputPath: $.Payload
+            End: true
+          OcrFailed: {Type: Fail, Error: DocumentOcrFailed, Cause: Textract could not process the document}
+      Policies:
+        - LambdaInvokePolicy: {FunctionName: !Ref PipelineFunction}
+        - LambdaInvokePolicy: {FunctionName: !Ref ValidationFunction}
+        - Statement:
+            - Effect: Allow
+              Action: ['logs:CreateLogDelivery', 'logs:GetLogDelivery', 'logs:UpdateLogDelivery', 'logs:DeleteLogDelivery', 'logs:ListLogDeliveries', 'logs:PutResourcePolicy', 'logs:DescribeResourcePolicies', 'logs:DescribeLogGroups']
+              Resource: '*'
+      Logging:
+        Destinations: [{CloudWatchLogsLogGroup: {LogGroupArn: !GetAtt WorkflowLogGroup.Arn}}]
+        IncludeExecutionData: false
+        Level: ERROR
+      Tracing: {Enabled: true}
+  WorkflowLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: {LogGroupName: !Sub '/aws/vendedlogs/states/sevafix-${Environment}-document-pipeline', RetentionInDays: 30}
+
+  VectorBucket:
+    Type: AWS::S3Vectors::VectorBucket
+    Condition: KnowledgeBaseEnabled
+    Properties:
+      VectorBucketName: !Sub sevafix-${AWS::AccountId}-${AWS::Region}-${Environment}-vectors
+  PolicyVectorIndex:
+    Type: AWS::S3Vectors::Index
+    Condition: KnowledgeBaseEnabled
+    DependsOn: VectorBucket
+    Properties:
+      VectorBucketName: !Sub sevafix-${AWS::AccountId}-${AWS::Region}-${Environment}-vectors
+      IndexName: policy-index
+      DataType: float32
+      Dimension: 1024
+      DistanceMetric: cosine
+  BedrockKnowledgeBaseRole:
+    Type: AWS::IAM::Role
+    Condition: KnowledgeBaseEnabled
+    Properties:
+      RoleName: !Sub sevafix-${Environment}-bedrock-kb-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: bedrock.amazonaws.com}, Action: 'sts:AssumeRole', Condition: {StringEquals: {'aws:SourceAccount': !Ref 'AWS::AccountId'}}}]
+      Policies:
+        - PolicyName: KnowledgeBaseAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - {Effect: Allow, Action: ['bedrock:InvokeModel'], Resource: !Sub 'arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/amazon.titan-embed-text-v2:0'}
+              - {Effect: Allow, Action: ['s3:ListBucket'], Resource: !GetAtt PolicyBucket.Arn}
+              - {Effect: Allow, Action: ['s3:GetObject'], Resource: !Sub '${PolicyBucket.Arn}/*'}
+              - {Effect: Allow, Action: ['kms:Decrypt'], Resource: !GetAtt DataKey.Arn}
+              - {Effect: Allow, Action: ['s3vectors:GetIndex', 's3vectors:QueryVectors', 's3vectors:PutVectors', 's3vectors:GetVectors', 's3vectors:DeleteVectors'], Resource: '*'}
+  PolicyKnowledgeBase:
+    Type: AWS::Bedrock::KnowledgeBase
+    Condition: KnowledgeBaseEnabled
+    Properties:
+      Name: !Sub sevafix-${Environment}-policy
+      Description: Versioned official policy evidence for grounded SevaFix diagnoses.
+      RoleArn: !GetAtt BedrockKnowledgeBaseRole.Arn
+      KnowledgeBaseConfiguration:
+        Type: VECTOR
+        VectorKnowledgeBaseConfiguration:
+          EmbeddingModelArn: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/amazon.titan-embed-text-v2:0
+          EmbeddingModelConfiguration:
+            BedrockEmbeddingModelConfiguration: {Dimensions: 1024, EmbeddingDataType: FLOAT32}
+      StorageConfiguration:
+        Type: S3_VECTORS
+        S3VectorsConfiguration:
+          IndexArn: !GetAtt PolicyVectorIndex.IndexArn
+  PolicyDataSource:
+    Type: AWS::Bedrock::DataSource
+    Condition: KnowledgeBaseEnabled
+    Properties:
+      Name: official-policy-documents
+      KnowledgeBaseId: !Ref PolicyKnowledgeBase
+      DataDeletionPolicy: DELETE
+      DataSourceConfiguration:
+        Type: S3
+        S3Configuration:
+          BucketArn: !GetAtt PolicyBucket.Arn
+          InclusionPrefixes: [published/]
+      VectorIngestionConfiguration:
+        ChunkingConfiguration:
+          ChunkingStrategy: FIXED_SIZE
+          FixedSizeChunkingConfiguration: {MaxTokens: 500, OverlapPercentage: 15}
+
+  Api5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: SevaFix API Lambda errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions: [{Name: FunctionName, Value: !Ref ApiFunction}]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  MalwareProtectionRole:
+    Type: AWS::IAM::Role
+    Condition: MalwareEnabled
+    Properties:
+      RoleName: !Sub sevafix-${Environment}-guardduty-malware-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: malware-protection-plan.guardduty.amazonaws.com}
+            Action: sts:AssumeRole
+            Condition: {StringEquals: {'aws:SourceAccount': !Ref 'AWS::AccountId'}}
+      Policies:
+        - PolicyName: MalwareProtectionAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:GetObject', 's3:GetObjectVersion', 's3:GetObjectTagging', 's3:GetObjectVersionTagging', 's3:PutObjectTagging', 's3:PutObjectVersionTagging']
+                Resource: !Sub '${CitizenDocumentsBucket.Arn}/*'
+              - Effect: Allow
+                Action: ['s3:ListBucket', 's3:GetBucketNotification', 's3:PutBucketNotification']
+                Resource: !GetAtt CitizenDocumentsBucket.Arn
+              - Effect: Allow
+                Action: ['kms:Decrypt', 'kms:GenerateDataKey']
+                Resource: !GetAtt DataKey.Arn
+              - Effect: Allow
+                Action: ['events:PutRule', 'events:DeleteRule', 'events:PutTargets', 'events:RemoveTargets']
+                Resource: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/DO-NOT-DELETE-AmazonGuardDutyMalwareProtectionS3*'
+              - {Effect: Allow, Action: ['guardduty:SendSecurityTelemetry'], Resource: '*'}
+  MalwareProtectionPlan:
+    Type: AWS::GuardDuty::MalwareProtectionPlan
+    Condition: MalwareEnabled
+    Properties:
+      Role: !GetAtt MalwareProtectionRole.Arn
+      ProtectedResource:
+        S3Bucket:
+          BucketName: !Ref CitizenDocumentsBucket
+          ObjectPrefixes: [users/]
+      Actions:
+        Tagging: {Status: ENABLED}
+  MalwareResultRule:
+    Type: AWS::Events::Rule
+    Condition: MalwareEnabled
+    Properties:
+      Description: Forward GuardDuty document scan results to the SevaFix pipeline.
+      EventPattern:
+        source: [aws.guardduty]
+        detail-type: [GuardDuty Malware Protection Object Scan Result]
+        detail:
+          s3ObjectDetails:
+            bucketName: [!Ref CitizenDocumentsBucket]
+      Targets: [{Id: PipelineWorker, Arn: !GetAtt PipelineFunction.Arn}]
+  MalwareResultInvokePermission:
+    Type: AWS::Lambda::Permission
+    Condition: MalwareEnabled
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PipelineFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt MalwareResultRule.Arn
+
+Outputs:
+  ApiUrl: {Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}'}
+  UserPoolId: {Value: !Ref UserPool}
+  UserPoolClientId: {Value: !Ref UserPoolClient}
+  TableName: {Value: !Ref DataTable}
+  CitizenBucketName: {Value: !Ref CitizenDocumentsBucket}
+  PolicyBucketName: {Value: !Ref PolicyBucket}
+  DocumentStateMachineArn: {Value: !Ref DocumentPipeline}
+  NotificationQueueUrl: {Value: !Ref NotificationQueue}
+  KnowledgeBaseId: {Condition: KnowledgeBaseEnabled, Value: !Ref PolicyKnowledgeBase}
+  KnowledgeBaseDataSourceId: {Condition: KnowledgeBaseEnabled, Value: !GetAtt PolicyDataSource.DataSourceId}

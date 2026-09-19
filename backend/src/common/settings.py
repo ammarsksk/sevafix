@@ -1,0 +1,35 @@
+from __future__ import annotations
+
+import os
+
+
+TABLE_NAME = os.getenv("TABLE_NAME", "SevaFix-dev")
+CITIZEN_BUCKET = os.getenv("CITIZEN_BUCKET", "")
+POLICY_BUCKET = os.getenv("POLICY_BUCKET", "")
+DOCUMENT_STATE_MACHINE_ARN = os.getenv("DOCUMENT_STATE_MACHINE_ARN", "")
+VALIDATION_FUNCTION_ARN = os.getenv("VALIDATION_FUNCTION_ARN", "")
+DIAGNOSIS_FUNCTION_ARN = os.getenv("DIAGNOSIS_FUNCTION_ARN", "")
+DELETION_FUNCTION_ARN = os.getenv("DELETION_FUNCTION_ARN", "")
+POLICY_FUNCTION_ARN = os.getenv("POLICY_FUNCTION_ARN", "")
+USER_POOL_ID = os.getenv("USER_POOL_ID", "")
+NOTIFICATION_TOPIC_ARN = os.getenv("NOTIFICATION_TOPIC_ARN", "")
+BEDROCK_KNOWLEDGE_BASE_ID = os.getenv("BEDROCK_KNOWLEDGE_BASE_ID", "")
+BEDROCK_DATA_SOURCE_ID = os.getenv("BEDROCK_DATA_SOURCE_ID", "")
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "")
+BEDROCK_MANTLE_MODEL_ID = os.getenv("BEDROCK_MANTLE_MODEL_ID", "")
+BEDROCK_GUARDRAIL_ID = os.getenv("BEDROCK_GUARDRAIL_ID", "")
+BEDROCK_GUARDRAIL_VERSION = os.getenv("BEDROCK_GUARDRAIL_VERSION", "DRAFT")
+BEDROCK_MODEL_ARN = os.getenv("BEDROCK_MODEL_ARN", BEDROCK_MODEL_ID)
+MALWARE_PROTECTION_ENABLED = os.getenv("MALWARE_PROTECTION_ENABLED", "false").lower() == "true"
+ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "http://localhost:3000")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "dev")
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+UPLOAD_URL_TTL_SECONDS = int(os.getenv("UPLOAD_URL_TTL_SECONDS", "300"))
+VIEW_URL_TTL_SECONDS = int(os.getenv("VIEW_URL_TTL_SECONDS", "180"))
+
+ALLOWED_MIME_TYPES = {
+    "application/pdf": ".pdf",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/tiff": ".tiff",
+}

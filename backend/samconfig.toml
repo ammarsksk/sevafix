@@ -1,0 +1,12 @@
+version = 0.1
+
+[dev.deploy.parameters]
+stack_name = "sevafix-dev"
+resolve_s3 = true
+s3_prefix = "sevafix-dev"
+region = "ap-south-1"
+profile = "sevafix-deploy"
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+confirm_changeset = false
+fail_on_empty_changeset = false
+parameter_overrides = "Environment=dev AllowedOrigin=http://localhost:3000 EnableMalwareProtection=false EnableKnowledgeBase=true BedrockModelId=global.amazon.nova-2-lite-v1:0 BedrockMantleModelId=openai.gpt-oss-20b"

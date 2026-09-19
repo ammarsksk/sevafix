@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "scheme": {
+    "schemeId": "pm-usp-csss",
+    "name": "PM-USP Central Sector Scheme of Scholarship for College and University Students",
+    "shortName": "PM-USP CSSS",
+    "status": "ACTIVE",
+    "authority": "Department of Higher Education, Ministry of Education, Government of India",
+    "officialPortalUrl": "https://scholarships.gov.in/",
+    "grievanceUrl": "https://pgportal.gov.in/",
+    "supportedApplicationTypes": ["FRESH", "RENEWAL"],
+    "disclaimer": "SevaFix prepares and checks applications; the official authority decides eligibility, selection, submission status, and payment.",
+    "liveWindow": {
+      "academicYear": "2026-27",
+      "applicationType": "RENEWAL",
+      "openedOn": "2026-06-01",
+      "candidateClosingDates": ["2026-09-30", "2026-10-31"],
+      "verificationState": "CONFLICT_REQUIRES_HUMAN_REVIEW",
+      "checkedAt": "2026-09-19",
+      "note": "The NSP scheme card and announcement page showed different renewal closing dates; no deadline rule is executable until reviewed."
+    },
+    "formSchema": {
+      "version": "1.0.0",
+      "sections": [
+        {
+          "id": "application",
+          "title": "Application type",
+          "fields": [
+            {"key": "application.type", "label": "Application type", "type": "select", "required": true, "options": ["FRESH", "RENEWAL"]}
+          ]
+        },
+        {
+          "id": "student",
+          "title": "Student details",
+          "fields": [
+            {"key": "student.primaryName", "label": "Name as on Class XII marksheet", "type": "text", "required": true},
+            {"key": "student.familyAnnualIncomeINR", "label": "Gross annual family income (INR)", "type": "integer", "requiredFor": ["FRESH"], "minimum": 0},
+            {"key": "student.boardPercentile", "label": "Class XII board percentile", "type": "number", "requiredFor": ["FRESH"], "minimum": 0, "maximum": 100},
+            {"key": "student.hasAcademicGap", "label": "Took a drop after Class XII", "type": "boolean", "requiredFor": ["FRESH"]},
+            {"key": "student.receivesOtherScholarship", "label": "Receiving another scholarship, fee waiver, or reimbursement", "type": "boolean", "required": true},
+            {"key": "student.hasOtr", "label": "NSP One-Time Registration is ready", "type": "boolean", "required": true},
+            {"key": "student.category", "label": "Category", "type": "select", "required": true, "options": ["GENERAL", "OBC", "SC", "ST", "OTHER"]},
+            {"key": "student.hasBenchmarkDisability", "label": "Claiming benchmark-disability reservation", "type": "boolean", "required": true},
+            {"key": "student.disabilityPercentage", "label": "Disability percentage", "type": "number", "minimum": 0, "maximum": 100},
+            {"key": "student.previousYearMarksPercent", "label": "Previous annual examination marks (%)", "type": "number", "requiredFor": ["RENEWAL"], "minimum": 0, "maximum": 100},
+            {"key": "student.attendancePercent", "label": "Previous-year attendance (%)", "type": "number", "requiredFor": ["RENEWAL"], "minimum": 0, "maximum": 100},
+            {"key": "student.receivedFreshScholarship", "label": "Previously selected as a PM-USP CSSS beneficiary", "type": "boolean", "requiredFor": ["RENEWAL"]},
+            {"key": "student.scholarshipYear", "label": "Current scholarship year", "type": "integer", "requiredFor": ["RENEWAL"], "minimum": 2, "maximum": 5},
+            {"key": "student.bankAadhaarSeeded", "label": "Bank account is ready for DBT as required by official guidance", "type": "boolean", "required": true, "sensitiveValuePolicy": "Store only yes/no; never store Aadhaar or bank-account number."}
+          ]
+        },
+        {
+          "id": "course",
+          "title": "Course and institution",
+          "fields": [
+            {"key": "student.enrolmentMode", "label": "Enrolment mode", "type": "select", "required": true, "options": ["REGULAR", "DISTANCE", "CORRESPONDENCE"]},
+            {"key": "student.courseType", "label": "Course type", "type": "select", "required": true, "options": ["DEGREE", "BTECH_BE", "PROFESSIONAL_INTEGRATED", "POSTGRADUATE", "DIPLOMA"]},
+            {"key": "student.courseYear", "label": "Current course year", "type": "integer", "required": true, "minimum": 1, "maximum": 5},
+            {"key": "institution.name", "label": "Institution name", "type": "text", "required": true},
+            {"key": "institution.aisheCode", "label": "AISHE code", "type": "text", "required": true},
+            {"key": "institution.recognized", "label": "Recognized by the relevant regulatory body", "type": "boolean", "required": true},
+            {"key": "institution.aisheActive", "label": "Institution status is active on AISHE", "type": "boolean", "required": true}
+          ]
+        }
+      ]
+    },
+    "documentChecklist": {
+      "FRESH": [
+        {"documentType": "MARKSHEET", "label": "Class XII marksheet", "required": true},
+        {"documentType": "INCOME_CERTIFICATE", "label": "Family income certificate", "required": true},
+        {"documentType": "CATEGORY_CERTIFICATE", "label": "Category/caste certificate", "requiredWhen": "student.category != GENERAL"},
+        {"documentType": "DISABILITY_CERTIFICATE", "label": "Disability certificate", "requiredWhen": "student.hasBenchmarkDisability == true"},
+        {"documentType": "ADMISSION_LETTER", "label": "Admission/course/institution evidence", "requiredBySevaFix": true},
+        {"documentType": "IDENTITY_PROOF", "label": "Identity evidence for consistency check", "requiredBySevaFix": true}
+      ],
+      "RENEWAL": [
+        {"documentType": "PREVIOUS_YEAR_MARKSHEET", "label": "Previous-year marksheet", "required": true},
+        {"documentType": "ATTENDANCE_CERTIFICATE", "label": "Attendance evidence", "requiredBySevaFix": true}
+      ]
+    },
+    "benefitSchedule": [
+      {"courseStage": "GRADUATION", "years": [1, 2, 3], "amountINRPerYear": 12000},
+      {"courseStage": "POSTGRADUATION", "amountINRPerYear": 20000},
+      {"courseStage": "PROFESSIONAL_OR_INTEGRATED", "years": [4, 5], "amountINRPerYear": 20000},
+      {"courseStage": "BTECH_BE", "years": [1, 2, 3], "amountINRPerYear": 12000},
+      {"courseStage": "BTECH_BE", "years": [4], "amountINRPerYear": 20000}
+    ]
+  },
+  "policyVersion": {
+    "policyVersionId": "pm-usp-csss-2026-27.1",
+    "status": "PUBLISHED",
+    "effectiveFrom": "2026-06-01",
+    "effectiveDateConfidence": "PARTIAL_PORTAL_CONFIRMATION",
+    "rulesBasis": "Guidelines applicable from AY 2022-23 onward plus FAQ 2025-26",
+    "portalObservationAcademicYear": "2026-27",
+    "verifiedAt": "2026-09-19",
+    "engineVersion": "rules-engine@1.0.0",
+    "dataQuality": "HUMAN_REVIEWED_WITH_LIVE_DATE_CONFLICT"
+  },
+  "sources": [
+    {
+      "sourceId": "pmusp-csss-guidelines",
+      "title": "PM-USP CSSS Guidelines applicable from academic year 2022-23 onward",
+      "url": "https://scholarships.gov.in/public/schemeGuidelines/CSSS_GUIDLINES_07022024_updated.pdf",
+      "authority": "Department of Higher Education, Ministry of Education via National Scholarship Portal",
+      "sourceType": "OFFICIAL_GUIDELINES_PDF",
+      "artifactInKnowledgeBase": true,
+      "expectedContentType": "application/pdf",
+      "pageCount": 4
+    },
+    {
+      "sourceId": "pmusp-csss-faq-2025-26",
+      "title": "PM-USP CSSS Frequently Asked Questions 2025-26",
+      "url": "https://scholarships.gov.in/public/schemeGuidelines/FAQ_DOHE_CSSS.pdf",
+      "authority": "Department of Higher Education, Ministry of Education via National Scholarship Portal",
+      "sourceType": "OFFICIAL_FAQ_PDF",
+      "artifactInKnowledgeBase": true,
+      "expectedContentType": "application/pdf",
+      "pageCount": 8
+    },
+    {
+      "sourceId": "nsp-scheme-list-2026-27",
+      "title": "National Scholarship Portal scheme listing 2026-27",
+      "url": "https://scholarships.gov.in/All-Scholarships",
+      "authority": "National Scholarship Portal, Government of India",
+      "sourceType": "OFFICIAL_LIVE_PORTAL",
+      "artifactInKnowledgeBase": false
+    },
+    {
+      "sourceId": "nsp-announcements-2026-27",
+      "title": "National Scholarship Portal announcements 2026-27",
+      "url": "https://scholarships.gov.in/ViewMoreAnnouncement",
+      "authority": "National Scholarship Portal, Government of India",
+      "sourceType": "OFFICIAL_LIVE_PORTAL",
+      "artifactInKnowledgeBase": false
+    },
+    {
+      "sourceId": "education-scholarships-page",
+      "title": "Ministry of Education scholarships and education-loan page",
+      "url": "https://www.education.gov.in/en/scholarships-education-loan-0",
+      "authority": "Ministry of Education, Government of India",
+      "sourceType": "OFFICIAL_LANDING_PAGE",
+      "artifactInKnowledgeBase": false
+    }
+  ],
+  "claims": [
+    {"claimId": "fresh-percentile", "summary": "Fresh applicant is above the 80th percentile in the relevant Class XII board stream.", "sourceId": "pmusp-csss-faq-2025-26", "page": 1, "section": "FAQ 1"},
+    {"claimId": "fresh-regular-degree", "summary": "Fresh applicant pursues a regular degree course; distance, correspondence, and diploma study are excluded.", "sourceId": "pmusp-csss-guidelines", "page": 2, "section": "Eligibility 4(ii)"},
+    {"claimId": "income-cap", "summary": "Gross parental/family income is no more than INR 450,000 per year; income certificate is required for fresh applicants.", "sourceId": "pmusp-csss-guidelines", "page": 2, "section": "Eligibility 4(v)"},
+    {"claimId": "other-scholarship", "summary": "Applicant must not receive a conflicting scholarship, fee waiver, or reimbursement.", "sourceId": "pmusp-csss-guidelines", "page": 2, "section": "Eligibility 4(iv)"},
+    {"claimId": "fresh-no-drop", "summary": "The 2025-26 FAQ excludes fresh applicants who took a drop after Class XII.", "sourceId": "pmusp-csss-faq-2025-26", "page": 1, "section": "FAQ 1"},
+    {"claimId": "recognized-institution", "summary": "Course and institution must be recognized by the relevant regulatory body; AISHE status/code matters.", "sourceId": "pmusp-csss-guidelines", "page": 2, "section": "Eligibility 4(iii), 4(vi)"},
+    {"claimId": "renewal-marks-attendance", "summary": "Renewal requires at least 50 percent marks and at least 75 percent attendance.", "sourceId": "pmusp-csss-guidelines", "page": 2, "section": "Eligibility 4(viii)"},
+    {"claimId": "duration", "summary": "Scholarship duration does not exceed five years, with course-specific limits.", "sourceId": "pmusp-csss-faq-2025-26", "page": 2, "section": "FAQ 5"},
+    {"claimId": "fresh-documents", "summary": "Fresh applicants upload Class XII marksheet and family income certificate, plus category/disability evidence when applicable.", "sourceId": "pmusp-csss-faq-2025-26", "page": 6, "section": "FAQ 19"},
+    {"claimId": "renewal-documents", "summary": "Renewal applicants upload the previous-year marksheet.", "sourceId": "pmusp-csss-faq-2025-26", "page": 6, "section": "FAQ 19"},
+    {"claimId": "application-route", "summary": "Applications are submitted online through NSP and not directly to the Ministry.", "sourceId": "pmusp-csss-guidelines", "page": 2, "section": "Eligibility 4(ix)"},
+    {"claimId": "deadline-conflict", "summary": "Two live NSP pages displayed different renewal closing dates on 2026-09-19, so the deadline is not executable until reviewed.", "sourceId": "nsp-scheme-list-2026-27", "section": "PM-USP CSSS scheme card; cross-check nsp-announcements-2026-27"}
+  ],
+  "rules": [
+    {"ruleId": "fresh-family-income-cap", "title": "Fresh applicant family income must not exceed INR 4.5 lakh", "severity": "BLOCKING", "requiredEvidence": ["INCOME_CERTIFICATE"], "appliesWhen": {"field": "application.type", "op": "EQ", "value": "FRESH"}, "assert": {"field": "student.familyAnnualIncomeINR", "op": "LTE", "value": 450000}, "messageKey": "income_cap", "sourceRefs": ["pmusp-csss-guidelines"]},
+    {"ruleId": "regular-course", "title": "Course must be regular, not distance or correspondence", "severity": "BLOCKING", "requiredEvidence": ["ADMISSION_LETTER"], "assert": {"field": "student.enrolmentMode", "op": "EQ", "value": "REGULAR"}, "messageKey": "regular_course", "sourceRefs": ["pmusp-csss-guidelines", "pmusp-csss-faq-2025-26"]},
+    {"ruleId": "not-diploma", "title": "Diploma courses are not eligible", "severity": "BLOCKING", "assert": {"field": "student.courseType", "op": "NOT_IN", "value": ["DIPLOMA"]}, "messageKey": "not_diploma", "sourceRefs": ["pmusp-csss-guidelines", "pmusp-csss-faq-2025-26"]},
+    {"ruleId": "no-conflicting-scholarship", "title": "Applicant must not receive a conflicting scholarship or fee reimbursement", "severity": "BLOCKING", "assert": {"field": "student.receivesOtherScholarship", "op": "EQ", "value": false}, "messageKey": "no_other_scholarship", "sourceRefs": ["pmusp-csss-guidelines"]},
+    {"ruleId": "fresh-board-percentile", "title": "Fresh applicant must be above the 80th percentile", "severity": "BLOCKING", "requiredEvidence": ["MARKSHEET"], "appliesWhen": {"field": "application.type", "op": "EQ", "value": "FRESH"}, "assert": {"field": "student.boardPercentile", "op": "GT", "value": 80}, "messageKey": "board_percentile", "sourceRefs": ["pmusp-csss-guidelines", "pmusp-csss-faq-2025-26"]},
+    {"ruleId": "fresh-no-academic-gap", "title": "Fresh applicant must not have taken a drop after Class XII", "severity": "BLOCKING", "appliesWhen": {"field": "application.type", "op": "EQ", "value": "FRESH"}, "assert": {"field": "student.hasAcademicGap", "op": "EQ", "value": false}, "messageKey": "academic_gap", "sourceRefs": ["pmusp-csss-faq-2025-26"]},
+    {"ruleId": "fresh-first-year", "title": "Fresh applicant must be in first year of the degree course", "severity": "BLOCKING", "appliesWhen": {"field": "application.type", "op": "EQ", "value": "FRESH"}, "assert": {"field": "student.courseYear", "op": "EQ", "value": 1}, "messageKey": "fresh_first_year", "sourceRefs": ["pmusp-csss-faq-2025-26"]},
+    {"ruleId": "recognized-institution", "title": "Institution must be recognized by the relevant regulatory body", "severity": "BLOCKING", "requiredEvidence": ["ADMISSION_LETTER"], "assert": {"field": "institution.recognized", "op": "EQ", "value": true}, "messageKey": "recognized_institution", "sourceRefs": ["pmusp-csss-guidelines"]},
+    {"ruleId": "active-aishe-institution", "title": "Institution must have an active AISHE record", "severity": "BLOCKING", "requiredEvidence": ["ADMISSION_LETTER"], "assert": {"field": "institution.aisheActive", "op": "EQ", "value": true}, "messageKey": "active_aishe", "sourceRefs": ["pmusp-csss-guidelines", "pmusp-csss-faq-2025-26"]},
+    {"ruleId": "otr-ready", "title": "NSP One-Time Registration must be ready", "severity": "BLOCKING", "assert": {"field": "student.hasOtr", "op": "EQ", "value": true}, "messageKey": "otr_ready", "sourceRefs": ["pmusp-csss-faq-2025-26", "nsp-announcements-2026-27"]},
+    {"ruleId": "name-consistency", "title": "Applicant name should match uploaded identity evidence", "severity": "BLOCKING", "requiredEvidence": ["IDENTITY_PROOF"], "assert": {"field": "student.primaryName", "op": "NAME_SIMILAR", "otherField": "document.primaryName"}, "messageKey": "name_consistency", "sourceRefs": ["pmusp-csss-faq-2025-26"]},
+    {"ruleId": "renewal-previous-beneficiary", "title": "Renewal applicant must be an existing PM-USP CSSS beneficiary", "severity": "BLOCKING", "appliesWhen": {"field": "application.type", "op": "EQ", "value": "RENEWAL"}, "assert": {"field": "student.receivedFreshScholarship", "op": "EQ", "value": true}, "messageKey": "renewal_beneficiary", "sourceRefs": ["pmusp-csss-faq-2025-26"]},
+    {"ruleId": "renewal-minimum-marks", "title": "Renewal requires at least 50 percent marks", "severity": "BLOCKING", "requiredEvidence": ["PREVIOUS_YEAR_MARKSHEET"], "appliesWhen": {"field": "application.type", "op": "EQ", "value": "RENEWAL"}, "assert": {"field": "student.previousYearMarksPercent", "op": "GTE", "value": 50}, "messageKey": "renewal_marks", "sourceRefs": ["pmusp-csss-guidelines", "pmusp-csss-faq-2025-26"]},
+    {"ruleId": "renewal-minimum-attendance", "title": "Renewal requires at least 75 percent attendance", "severity": "BLOCKING", "requiredEvidence": ["ATTENDANCE_CERTIFICATE"], "appliesWhen": {"field": "application.type", "op": "EQ", "value": "RENEWAL"}, "assert": {"field": "student.attendancePercent", "op": "GTE", "value": 75}, "messageKey": "renewal_attendance", "sourceRefs": ["pmusp-csss-guidelines", "pmusp-csss-faq-2025-26"]},
+    {"ruleId": "renewal-duration", "title": "Scholarship duration must not exceed five years", "severity": "BLOCKING", "appliesWhen": {"field": "application.type", "op": "EQ", "value": "RENEWAL"}, "assert": {"field": "student.scholarshipYear", "op": "LTE", "value": 5}, "messageKey": "renewal_duration", "sourceRefs": ["pmusp-csss-faq-2025-26"]},
+    {"ruleId": "dbt-bank-readiness", "title": "Bank account should be ready for official DBT requirements", "severity": "ADVISORY", "assert": {"field": "student.bankAadhaarSeeded", "op": "EQ", "value": true}, "messageKey": "dbt_readiness", "sourceRefs": ["pmusp-csss-faq-2025-26"]}
+  ],
+  "demoCases": {
+    "freshEligible": {
+      "application.type": "FRESH",
+      "student.primaryName": "Aditi Sharma",
+      "student.familyAnnualIncomeINR": 350000,
+      "student.boardPercentile": 91,
+      "student.hasAcademicGap": false,
+      "student.receivesOtherScholarship": false,
+      "student.hasOtr": true,
+      "student.category": "GENERAL",
+      "student.hasBenchmarkDisability": false,
+      "student.bankAadhaarSeeded": true,
+      "student.enrolmentMode": "REGULAR",
+      "student.courseType": "DEGREE",
+      "student.courseYear": 1,
+      "institution.name": "Fictional National College",
+      "institution.aisheCode": "C-DEMO-001",
+      "institution.recognized": true,
+      "institution.aisheActive": true
+    },
+    "renewalEligible": {
+      "application.type": "RENEWAL",
+      "student.primaryName": "Aditi Sharma",
+      "student.receivesOtherScholarship": false,
+      "student.hasOtr": true,
+      "student.category": "GENERAL",
+      "student.hasBenchmarkDisability": false,
+      "student.previousYearMarksPercent": 72,
+      "student.attendancePercent": 84,
+      "student.receivedFreshScholarship": true,
+      "student.scholarshipYear": 2,
+      "student.bankAadhaarSeeded": true,
+      "student.enrolmentMode": "REGULAR",
+      "student.courseType": "DEGREE",
+      "student.courseYear": 2,
+      "institution.name": "Fictional National College",
+      "institution.aisheCode": "C-DEMO-001",
+      "institution.recognized": true,
+      "institution.aisheActive": true
+    }
+  }
+}

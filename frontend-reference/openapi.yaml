@@ -1,0 +1,500 @@
+openapi: 3.1.0
+info:
+  title: SevaFix Development API
+  version: 1.0.0-dev
+  description: >-
+    Frontend contract derived from the deployed SevaFix backend. Except for /health,
+    send the Cognito ID token as a Bearer token.
+servers:
+  - url: https://r155h572fd.execute-api.ap-south-1.amazonaws.com/dev
+security:
+  - cognitoIdToken: []
+paths:
+  /health:
+    get:
+      security: []
+      summary: Public health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service, environment]
+                properties:
+                  status: { type: string, const: ok }
+                  service: { type: string }
+                  environment: { type: string }
+  /me:
+    get:
+      summary: Get current user profile
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+    patch:
+      summary: Update allowlisted profile fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName: { type: string }
+                locale: { type: string }
+                notificationEmail: { type: string, format: email }
+                notificationOptIn: { type: boolean }
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+  /me/deletion:
+    post:
+      summary: Queue account and data deletion
+      requestBody: { $ref: "#/components/requestBodies/EmptyObject" }
+      responses:
+        "202": { $ref: "#/components/responses/JobAccepted" }
+  /schemes:
+    get:
+      summary: List active scheme catalog records
+      responses:
+        "200": { $ref: "#/components/responses/ItemList" }
+  /schemes/{schemeId}:
+    parameters:
+      - $ref: "#/components/parameters/SchemeId"
+    get:
+      summary: Get one scheme
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /applications:
+    get:
+      summary: List applications owned by the current user
+      responses:
+        "200": { $ref: "#/components/responses/ItemList" }
+    post:
+      summary: Create an application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [schemeId]
+              properties:
+                schemeId: { type: string, example: pm-usp-csss }
+      responses:
+        "201": { $ref: "#/components/responses/JsonSuccess" }
+        "400": { $ref: "#/components/responses/ApiError" }
+  /applications/{appId}:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+    get:
+      summary: Get application aggregate
+      description: Returns application, documents, versions, timeline, validation runs, checks, diagnoses, and repairs.
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /grievances:
+    post:
+      summary: Open a grievance for an existing SevaFix or outside application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [schemeId, sourceApplication]
+              properties:
+                schemeId: { type: string, example: pm-usp-csss }
+                sourceApplication: { type: string, enum: [SEVAFIX, EXTERNAL] }
+                rejectionReason: { type: string, maxLength: 10000, description: Optional; when absent, diagnosis is inferred from checks and documents }
+                existingApplicationId: { type: string, description: Required for SEVAFIX }
+                officialApplicationId: { type: string, description: Required for EXTERNAL; stored only as a hash and masked display value }
+                submittedAt: { type: string, format: date-time }
+      responses:
+        "201": { $ref: "#/components/responses/JsonSuccess" }
+        "400": { $ref: "#/components/responses/ApiError" }
+  /applications/{appId}/draft:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+    patch:
+      summary: Merge draft fields with optimistic concurrency
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields, expectedRevision]
+              properties:
+                fields:
+                  type: object
+                  additionalProperties: true
+                expectedRevision: { type: integer, minimum: 0 }
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+        "409": { $ref: "#/components/responses/ApiError" }
+  /applications/{appId}/versions:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+    post:
+      summary: Freeze an immutable application version
+      requestBody: { $ref: "#/components/requestBodies/EmptyObject" }
+      responses:
+        "201": { $ref: "#/components/responses/JsonSuccess" }
+  /applications/{appId}/validate:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+    post:
+      summary: Queue deterministic validation
+      requestBody: { $ref: "#/components/requestBodies/EmptyObject" }
+      responses:
+        "202": { $ref: "#/components/responses/JobAccepted" }
+  /applications/{appId}/official-submission:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+    post:
+      summary: Record a manual submission to the official portal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [officialApplicationId, submittedAt]
+              properties:
+                officialApplicationId: { type: string }
+                submittedAt: { type: string, format: date-time }
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+  /applications/{appId}/timeline-events:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+    post:
+      summary: Append a manual timeline event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventType]
+              properties:
+                eventType: { type: string }
+                payload: { type: object, additionalProperties: true }
+                occurredAt: { type: string, format: date-time }
+      responses:
+        "201": { $ref: "#/components/responses/JsonSuccess" }
+  /applications/{appId}/diagnoses:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+    post:
+      summary: Queue rejection diagnosis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reasonText: { type: string }
+                rejectionDocumentId: { type: string }
+      responses:
+        "202": { $ref: "#/components/responses/JobAccepted" }
+  /applications/{appId}/repairs:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+    post:
+      summary: Create a repair case and clone the latest frozen version into the draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                diagnosisId: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/JsonSuccess" }
+  /documents/uploads:
+    post:
+      summary: Create a direct-to-S3 upload session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [applicationId, documentType, contentType, size, sha256]
+              properties:
+                applicationId: { type: string }
+                documentType: { type: string }
+                contentType:
+                  type: string
+                  enum: [application/pdf, image/jpeg, image/png, image/tiff]
+                size: { type: integer, minimum: 1, maximum: 10485760 }
+                sha256:
+                  type: string
+                  pattern: "^[a-f0-9]{64}$"
+      responses:
+        "201":
+          description: Upload session
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [documentId, uploadUrl, expiresIn, requiredHeaders]
+                properties:
+                  documentId: { type: string }
+                  uploadUrl: { type: string, format: uri }
+                  expiresIn: { type: integer }
+                  requiredHeaders:
+                    type: object
+                    additionalProperties: { type: string }
+  /documents/{documentId}/complete:
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    post:
+      summary: Verify the uploaded object and begin document processing
+      requestBody: { $ref: "#/components/requestBodies/EmptyObject" }
+      responses:
+        "202": { $ref: "#/components/responses/JsonSuccess" }
+  /documents/{documentId}/view-url:
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    post:
+      summary: Create a short-lived signed document view URL
+      requestBody: { $ref: "#/components/requestBodies/EmptyObject" }
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+  /documents/{documentId}:
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    delete:
+      summary: Delete a document
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+  /applications/{appId}/documents/{documentId}/view-url:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+      - $ref: "#/components/parameters/DocumentId"
+    post:
+      summary: Create a signed view URL through an application-scoped path
+      requestBody: { $ref: "#/components/requestBodies/EmptyObject" }
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+  /applications/{appId}/documents/{documentId}/facts:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+      - $ref: "#/components/parameters/DocumentId"
+    patch:
+      summary: Confirm or correct extracted document facts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [facts]
+              properties:
+                facts:
+                  type: object
+                  minProperties: 1
+                  additionalProperties: true
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+  /applications/{appId}/documents/{documentId}:
+    parameters:
+      - $ref: "#/components/parameters/AppId"
+      - $ref: "#/components/parameters/DocumentId"
+    delete:
+      summary: Delete a document through an application-scoped path
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+  /jobs/{jobId}:
+    parameters:
+      - $ref: "#/components/parameters/JobId"
+    get:
+      summary: Poll a user-owned asynchronous job
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /review/source-changes:
+    get:
+      summary: List source changes awaiting review
+      description: Requires policy-reviewer or admin Cognito group.
+      responses:
+        "200": { $ref: "#/components/responses/ItemList" }
+        "403": { $ref: "#/components/responses/ApiError" }
+  /review/source-changes/{changeId}:
+    parameters:
+      - $ref: "#/components/parameters/ChangeId"
+    get:
+      summary: Get one source change
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+  /review/source-changes/{changeId}/approve:
+    parameters:
+      - $ref: "#/components/parameters/ChangeId"
+    post:
+      summary: Approve an official-source change
+      requestBody: { $ref: "#/components/requestBodies/EmptyObject" }
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+  /review/source-changes/{changeId}/reject:
+    parameters:
+      - $ref: "#/components/parameters/ChangeId"
+    post:
+      summary: Reject an official-source change
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 2000 }
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+  /review/policy-versions/{versionId}/publish:
+    parameters:
+      - $ref: "#/components/parameters/VersionId"
+    post:
+      summary: Publish an immutable policy version and rules
+      description: Requires 1-20 rules, auditReason, and confirmation equal to PUBLISH.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [schemeId, rules, policyText, auditReason, confirmation]
+              properties:
+                schemeId: { type: string }
+                rules:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items: { type: object, additionalProperties: true }
+                policyText: { type: string, minLength: 1, maxLength: 200000 }
+                sourceIds:
+                  type: array
+                  maxItems: 10
+                  items: { type: string }
+                authority: { type: string }
+                effectiveFrom: { type: string, format: date }
+                effectiveDateConfidence: { type: string }
+                auditReason: { type: string, maxLength: 2000 }
+                confirmation: { type: string, const: PUBLISH }
+      responses:
+        "201": { $ref: "#/components/responses/JsonSuccess" }
+  /review/policy-versions/{versionId}/rollback-pointer:
+    parameters:
+      - $ref: "#/components/parameters/VersionId"
+    post:
+      summary: Point a scheme back to an existing published policy version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [schemeId, auditReason, confirmation]
+              properties:
+                schemeId: { type: string }
+                auditReason: { type: string, maxLength: 2000 }
+                confirmation: { type: string, const: ROLLBACK }
+      responses:
+        "200": { $ref: "#/components/responses/JsonSuccess" }
+components:
+  securitySchemes:
+    cognitoIdToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Cognito ID token from user pool ap-south-1_WXRdiRGBo.
+  parameters:
+    SchemeId:
+      name: schemeId
+      in: path
+      required: true
+      schema: { type: string }
+    AppId:
+      name: appId
+      in: path
+      required: true
+      schema: { type: string }
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema: { type: string }
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema: { type: string }
+    ChangeId:
+      name: changeId
+      in: path
+      required: true
+      schema: { type: string }
+    VersionId:
+      name: versionId
+      in: path
+      required: true
+      schema: { type: string }
+  requestBodies:
+    EmptyObject:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            maxProperties: 0
+  responses:
+    JsonSuccess:
+      description: Successful JSON response
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    ItemList:
+      description: Successful list response
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items]
+            properties:
+              items:
+                type: array
+                items: { type: object, additionalProperties: true }
+    JobAccepted:
+      description: Asynchronous job accepted
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [jobId, jobType, status]
+            properties:
+              jobId: { type: string }
+              jobType: { type: string }
+              status: { type: string, example: QUEUED }
+              applicationId: { type: string }
+              diagnosisId: { type: string }
+    ApiError:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: object
+                required: [code, message, correlationId]
+                properties:
+                  code: { type: string }
+                  message: { type: string }
+                  correlationId: { type: string }
+                  details: { type: object, additionalProperties: true }

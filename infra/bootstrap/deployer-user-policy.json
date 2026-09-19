@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AssumeOnlySevaFixDeploymentRole",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::851725360556:role/sevafix-deployment-role"
+    },
+    {
+      "Sid": "ReadOwnIdentity",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser",
+        "iam:ListMFADevices"
+      ],
+      "Resource": "arn:aws:iam::851725360556:user/sevafix-deployer"
+    }
+  ]
+}

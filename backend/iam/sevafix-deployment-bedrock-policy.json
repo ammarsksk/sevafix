@@ -1,0 +1,43 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadBedrockCatalogAndConfiguredResources",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:GetFoundationModel",
+        "bedrock:GetFoundationModelAvailability",
+        "bedrock:GetInferenceProfile",
+        "bedrock:GetUseCaseForModelAccess",
+        "bedrock:ListFoundationModels",
+        "bedrock:ListInferenceProfiles",
+        "bedrock:ListMarketplaceModelEndpoints"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "InvokeOnlySevaFixAmazonModels",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0",
+        "arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0",
+        "arn:aws:bedrock:*:851725360556:inference-profile/global.amazon.nova-2-lite-v1:0"
+      ]
+    },
+    {
+      "Sid": "OperateOnlySevaFixKnowledgeBase",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:GetIngestionJob",
+        "bedrock:ListIngestionJobs",
+        "bedrock:Retrieve",
+        "bedrock:StartIngestionJob"
+      ],
+      "Resource": "arn:aws:bedrock:ap-south-1:851725360556:knowledge-base/JXV1YUBHLD"
+    }
+  ]
+}
