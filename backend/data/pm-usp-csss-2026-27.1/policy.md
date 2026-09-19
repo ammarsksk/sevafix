@@ -82,7 +82,7 @@ The official guidelines describe 15 percent of slots for SC, 7.5 percent for ST,
 ## Application and verification
 
 - Applications are accepted online through NSP; direct applications to the Ministry are not accepted.
-- Credentials can be verified using DigiLocker and by the institute followed by the State Nodal Agency.
+- Credentials can be verified by the institute followed by the State Nodal Agency.
 - The applicant must select the correct course duration and the correct institution/AISHE code.
 - Details remain editable until final submission; later correction depends on the official application being marked defective.
 - NSP distinguishes a defective application, which can be corrected and resubmitted, from a rejected application, which is disqualified for an eligibility or data problem.

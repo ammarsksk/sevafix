@@ -567,7 +567,17 @@ def _handle(method: str, path: str, event: dict[str, Any], store: Store) -> dict
         profile = store.get(f"USER#{owner_sub}", "PROFILE") or {"sub": owner_sub, "profileStatus": "EMPTY"}
         return response(200, profile)
     if method == "PATCH" and path == "/me":
-        allowed = {k: body[k] for k in ("displayName", "locale", "notificationEmail", "notificationOptIn") if k in body}
+        allowed = {
+            k: body[k]
+            for k in (
+                "displayName",
+                "governmentName",
+                "locale",
+                "notificationEmail",
+                "notificationOptIn",
+            )
+            if k in body
+        }
         now = utc_now()
         item = {"PK": f"USER#{owner_sub}", "SK": "PROFILE", "entityType": "UserProfile", "sub": owner_sub, "updatedAt": now, **allowed}
         existing = store.get(item["PK"], item["SK"])
@@ -578,7 +588,6 @@ def _handle(method: str, path: str, event: dict[str, Any], store: Store) -> dict
             item["createdAt"] = now
         store.put(item)
         return response(200, item)
-
     if method == "GET" and path == "/schemes":
         return response(200, {"items": store.query("CATALOG#SCHEMES", begins_with="SCHEME#")})
     params = _path_match(path, "/schemes/{schemeId}")

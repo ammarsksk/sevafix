@@ -5,6 +5,9 @@ const required = (name: string, value: string | undefined): string => {
   return value;
 };
 
+const oauthDomain = process.env.NEXT_PUBLIC_COGNITO_OAUTH_DOMAIN?.replace(/^https?:?\/\//, "").replace(/\/$/, "");
+const oauthRedirect = process.env.NEXT_PUBLIC_COGNITO_OAUTH_REDIRECT ?? "http://localhost:3000";
+
 const authConfig: ResourcesConfig["Auth"] = {
   Cognito: {
     userPoolId: required(
@@ -15,7 +18,21 @@ const authConfig: ResourcesConfig["Auth"] = {
       "NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID",
       process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID,
     ),
-    loginWith: { email: true },
+    loginWith: {
+      email: true,
+      ...(oauthDomain
+        ? {
+            oauth: {
+              domain: oauthDomain,
+              scopes: ["openid", "email", "profile"],
+              redirectSignIn: [oauthRedirect],
+              redirectSignOut: [oauthRedirect],
+              responseType: "code" as const,
+              providers: ["Google" as const],
+            },
+          }
+        : {}),
+    },
     signUpVerificationMethod: "code",
     userAttributes: { email: { required: true } },
     passwordFormat: {

@@ -7,6 +7,7 @@ import {
   resendSignUpCode,
   resetPassword,
   signIn as amplifySignIn,
+  signInWithRedirect,
   signOut as amplifySignOut,
   signUp as amplifySignUp,
 } from "aws-amplify/auth";
@@ -38,6 +39,7 @@ interface AuthContextValue {
   isReviewer: boolean;
   refresh: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   confirmEmail: (email: string, code: string) => Promise<void>;
   resendConfirmationCode: (email: string) => Promise<void>;
@@ -98,6 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [refresh],
   );
 
+  const signInWithGoogle = useCallback(async () => {
+    await signInWithRedirect({ provider: "Google" });
+  }, []);
+
   const signUp = useCallback(async (email: string, password: string) => {
     await amplifySignUp({
       username: email,
@@ -144,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ),
       refresh,
       signIn,
+      signInWithGoogle,
       signUp,
       confirmEmail,
       resendConfirmationCode,
@@ -156,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       refresh,
       signIn,
+      signInWithGoogle,
       signUp,
       confirmEmail,
       resendConfirmationCode,

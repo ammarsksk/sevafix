@@ -13,7 +13,7 @@ function SchemesContent() {
     <div>
       <PageHeader
         title="Create a new application"
-        description="Choose a scheme to prepare an application from scratch. Only schemes with reviewed policies and executable checks are shown."
+        description="Browse supported government schemes. Application preparation is enabled only after a scheme's policy and checks have been reviewed."
       />
       <ErrorBanner message={schemes.error instanceof Error ? schemes.error.message : null} />
       <div className="space-y-4">
@@ -35,10 +35,19 @@ function SchemesContent() {
                     Official government portal
                   </a>
                 ) : null}
+                {scheme.applicationReady === false ? (
+                  <p className="mt-3 text-xs font-medium text-amber-700">
+                    Policy onboarding in progress. Information only; application preparation is not enabled yet.
+                  </p>
+                ) : null}
               </div>
-              <InlineLink href={`/applications/new?schemeId=${encodeURIComponent(scheme.schemeId)}`}>
-                Start application
-              </InlineLink>
+              {scheme.applicationReady === false ? (
+                <span className="text-xs font-medium text-slate-400">Coming soon</span>
+              ) : (
+                <InlineLink href={`/applications/new?schemeId=${encodeURIComponent(scheme.schemeId)}`}>
+                  Start application
+                </InlineLink>
+              )}
             </div>
           </Card>
         ))}

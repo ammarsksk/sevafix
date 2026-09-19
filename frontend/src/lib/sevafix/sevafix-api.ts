@@ -88,9 +88,15 @@ export const sevaFixApi = {
   health: () => api<{ status: string; service: string; environment: string }>("/health", {}, false),
 
   me: () => api<UserProfile>("/me"),
-  updateMe: (body: Partial<Pick<UserProfile, "displayName" | "locale" | "notificationEmail" | "notificationOptIn">>) =>
+  updateMe: (
+    body: Partial<
+      Pick<
+        UserProfile,
+        "displayName" | "governmentName" | "locale" | "notificationEmail" | "notificationOptIn"
+      >
+    >,
+  ) =>
     api<UserProfile>("/me", { method: "PATCH", body: json(body) }),
-
   schemes: () => api<{ items: Scheme[] }>("/schemes"),
   scheme: (schemeId: string) => api<Scheme>(`/schemes/${encodeURIComponent(schemeId)}`),
 

@@ -34,6 +34,21 @@ aws cloudformation describe-stacks --stack-name sevafix-dev --profile sevafix-de
 
 ## Main API routes
 
+Live government scheme intelligence is supported by registering a source with
+`sourceKind: "DATA_GOV_API"` in `SOURCES#REGISTRY`. The source monitor adds the
+server-side `DATA_GOV_API_KEY` to data.gov.in requests, normalizes JSON before
+hashing, and creates the same reviewer change record used for official webpages.
+Set `DataGovApiKey` during deployment; never put the key in frontend code.
+The scheme-catalog seed registers API-enabled catalogs for PM-KISAN, PMUY,
+PMAY-G, and NSAP, official portals for every discovery scheme, and the PM-KISAN
+operational-guidelines PDF. Stored endpoints never contain the API key. Schemes
+without an API-enabled data.gov.in catalog are monitored through their official
+government sources instead of using fabricated or static-resource endpoints.
+
+For a key-safe deployment, run `backend/scripts/deploy_data_gov.ps1`. It asks
+for the key using a hidden prompt, builds and deploys the stack, seeds the
+scheme/source registry, and clears the plaintext key variable when it exits.
+
 Citizen routes include `/me`, `/schemes`, `/applications`, `POST /grievances`, validation/version/repair/submission/timeline routes, `/documents/uploads`, document completion/view/deletion/fact confirmation, `/jobs/{id}`, and `/me/deletion`. `POST /grievances` accepts either an owned SevaFix application or an outside official application, freezes the pre-diagnosis state, and never stores the raw outside application ID.
 
 Reviewer routes require the `policy-reviewer` or `admin` Cognito group:

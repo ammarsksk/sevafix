@@ -16,13 +16,14 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -40,6 +41,17 @@ function LoginForm() {
       setError(message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onGoogleSignIn() {
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start Google sign-in");
+      setGoogleLoading(false);
     }
   }
 
@@ -67,6 +79,13 @@ function LoginForm() {
           />
           <Button type="submit" className="w-full" loading={loading}>
             Log in
+          </Button>
+          <div className="relative py-1 text-center text-xs text-slate-500">
+            <span className="bg-white px-2">or</span>
+            <span className="absolute inset-x-0 top-1/2 -z-10 border-t border-slate-200" />
+          </div>
+          <Button type="button" variant="secondary" className="w-full" loading={googleLoading} onClick={onGoogleSignIn}>
+            Continue with Google
           </Button>
         </form>
         <div className="mt-4 flex justify-between text-sm">

@@ -24,10 +24,24 @@ Parameters:
   BedrockMantleModelId:
     Type: String
     Default: openai.gpt-oss-20b
-
+  GoogleClientId:
+    Type: String
+    Default: ''
+  GoogleClientSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
+  GoogleCallbackUrl:
+    Type: String
+    Default: http://localhost:3000
+  DataGovApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
 Conditions:
   MalwareEnabled: !Equals [!Ref EnableMalwareProtection, 'true']
   KnowledgeBaseEnabled: !Equals [!Ref EnableKnowledgeBase, 'true']
+  GoogleConfigured: !And [!Not [!Equals [!Ref GoogleClientId, '']], !Not [!Equals [!Ref GoogleClientSecret, '']]]
 
 Globals:
   Function:
@@ -51,6 +65,7 @@ Globals:
         BEDROCK_KNOWLEDGE_BASE_ID: !If [KnowledgeBaseEnabled, !Ref PolicyKnowledgeBase, '']
         BEDROCK_DATA_SOURCE_ID: !If [KnowledgeBaseEnabled, !GetAtt PolicyDataSource.DataSourceId, '']
         NOTIFICATION_TOPIC_ARN: !Ref NotificationTopic
+        DATA_GOV_API_KEY: !Ref DataGovApiKey
   HttpApi:
     CorsConfiguration:
       AllowOrigins: [!Ref AllowedOrigin]
@@ -194,12 +209,25 @@ Resources:
       UserPoolAddOns: {AdvancedSecurityMode: AUDIT}
       Schema:
         - {Name: email, Required: true, Mutable: true}
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Condition: GoogleConfigured
+    Properties:
+      Domain: !Sub sevafix-${Environment}-${AWS::AccountId}
+      UserPoolId: !Ref UserPool
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
+    DependsOn: [GoogleIdentityProvider, UserPoolDomain]
     Properties:
       ClientName: !Sub sevafix-web-${Environment}
       UserPoolId: !Ref UserPool
       GenerateSecret: false
+      SupportedIdentityProviders: !If [GoogleConfigured, [COGNITO, Google], [COGNITO]]
+      CallbackURLs: [!Ref GoogleCallbackUrl]
+      LogoutURLs: [!Ref GoogleCallbackUrl]
+      AllowedOAuthFlowsUserPoolClient: !If [GoogleConfigured, true, false]
+      AllowedOAuthFlows: !If [GoogleConfigured, [code], []]
+      AllowedOAuthScopes: !If [GoogleConfigured, [openid, email, profile], []]
       PreventUserExistenceErrors: ENABLED
       EnableTokenRevocation: true
       ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH, ALLOW_USER_PASSWORD_AUTH]
@@ -207,6 +235,18 @@ Resources:
       IdTokenValidity: 15
       RefreshTokenValidity: 7
       TokenValidityUnits: {AccessToken: minutes, IdToken: minutes, RefreshToken: days}
+  GoogleIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: GoogleConfigured
+    Properties:
+      ProviderName: Google
+      ProviderType: Google
+      UserPoolId: !Ref UserPool
+      AttributeMapping: {email: email}
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: openid email profile
   CitizenGroup:
     Type: AWS::Cognito::UserPoolGroup
     Properties: {GroupName: citizen, Description: SevaFix citizens, UserPoolId: !Ref UserPool}
@@ -606,6 +646,7 @@ Outputs:
   ApiUrl: {Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}'}
   UserPoolId: {Value: !Ref UserPool}
   UserPoolClientId: {Value: !Ref UserPoolClient}
+  CognitoHostedUiDomain: {Value: !Sub 'https://sevafix-${Environment}-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com'}
   TableName: {Value: !Ref DataTable}
   CitizenBucketName: {Value: !Ref CitizenDocumentsBucket}
   PolicyBucketName: {Value: !Ref PolicyBucket}

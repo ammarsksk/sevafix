@@ -3,8 +3,14 @@ __pycache__/
 .pytest_cache/
 .aws-sam/
 backend/.aws-sam/
+.tools/
+.venv/
+frontend/node_modules/
+frontend/.next/
+tmp/
 backend/titan-test-output.json
 artifacts/frontend-smoke-failure.png
+artifacts/mock-run/mock-run-failure.png
 .env
 .env.*
 !.env.example

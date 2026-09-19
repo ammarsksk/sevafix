@@ -20,6 +20,7 @@ import type { UserProfile } from "@/lib/sevafix/sevafix-types";
 function ProfileForm({ profile }: { profile: UserProfile }) {
   const updateMe = useUpdateMe();
   const [displayName, setDisplayName] = useState(profile.displayName ?? "");
+  const [governmentName, setGovernmentName] = useState(profile.governmentName ?? "");
   const [locale, setLocale] = useState(profile.locale ?? "en");
   const [notificationEmail, setNotificationEmail] = useState(profile.notificationEmail ?? "");
   const [notificationOptIn, setNotificationOptIn] = useState(Boolean(profile.notificationOptIn));
@@ -29,7 +30,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
   async function onSave() {
     setSaveError(null);
     try {
-      await updateMe.mutateAsync({ displayName, locale, notificationEmail, notificationOptIn });
+      await updateMe.mutateAsync({ displayName, governmentName, locale, notificationEmail, notificationOptIn });
       setSavedAt(new Date());
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Could not save settings");
@@ -42,6 +43,12 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
       <ErrorBanner message={saveError} />
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField label="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+        <TextField
+          label="Name on government documents"
+          value={governmentName}
+          onChange={(e) => setGovernmentName(e.target.value)}
+          hint="Enter it exactly as it appears on your official documents. This is not verification by itself."
+        />
         <TextField label="Locale" value={locale} onChange={(e) => setLocale(e.target.value)} />
         <TextField
           label="Notification email"

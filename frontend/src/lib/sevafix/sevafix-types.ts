@@ -14,6 +14,8 @@ export interface Scheme {
   name: string;
   shortName?: string;
   status: "ACTIVE" | string;
+  applicationReady?: boolean;
+  catalogStatus?: "READY" | "POLICY_ONBOARDING" | string;
   activePolicyVersionId?: string;
   officialPortalUrl?: string;
   disclaimer?: string;
@@ -24,6 +26,7 @@ export interface UserProfile {
   sub: string;
   profileStatus?: "EMPTY" | string;
   displayName?: string;
+  governmentName?: string;
   locale?: string;
   notificationEmail?: string;
   notificationOptIn?: boolean;

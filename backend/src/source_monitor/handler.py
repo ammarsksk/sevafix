@@ -4,10 +4,11 @@ import hashlib
 import ipaddress
 import json
 import logging
+import re
 import socket
 from html.parser import HTMLParser
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 import boto3
@@ -20,6 +21,7 @@ from common.util import new_id, utc_now
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
 s3 = boto3.client("s3")
+API_KEY_PATTERN = re.compile(r"(?i)(api-key=)[^&\s]+")
 
 
 class _VisibleTextParser(HTMLParser):
@@ -41,7 +43,13 @@ class _VisibleTextParser(HTMLParser):
             self.parts.append(data)
 
 
-def _content_digest(body: bytes, content_type: str) -> str:
+def _content_digest(body: bytes, content_type: str, source_kind: str = "WEB") -> str:
+    if source_kind == "DATA_GOV_API":
+        try:
+            normalized = json.dumps(json.loads(body), sort_keys=True, separators=(",", ":"))
+            return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass
     if "html" not in content_type.casefold():
         return hashlib.sha256(body).hexdigest()
     parser = _VisibleTextParser()
@@ -61,9 +69,31 @@ def _safe_host(url: str) -> str:
     return parsed.hostname.casefold()
 
 
-def _fetch(url: str) -> tuple[bytes, dict[str, str]]:
+def _request_url(url: str, source_kind: str = "WEB") -> str:
+    if source_kind == "DATA_GOV_API":
+        if not settings.DATA_GOV_API_KEY:
+            raise RuntimeError("DATA_GOV_API_KEY is not configured")
+        parsed = urlparse(url)
+        query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+        query["api-key"] = settings.DATA_GOV_API_KEY
+        return urlunparse(parsed._replace(query=urlencode(query)))
+    return url
+
+
+def _safe_error(exc: Exception) -> str:
+    return API_KEY_PATTERN.sub(r"\1<redacted>", str(exc))[:1000]
+
+
+def _fetch(url: str, source_kind: str = "WEB") -> tuple[bytes, dict[str, str]]:
+    url = _request_url(url, source_kind)
     allowed_host = _safe_host(url)
-    request = Request(url, headers={"User-Agent": "SevaFix-Policy-Monitor/1.0", "Accept": "text/html,application/pdf,text/plain,*/*"})
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "SevaFix-Policy-Monitor/1.0",
+            "Accept": "application/json,text/html,application/pdf,text/plain,*/*",
+        },
+    )
     with urlopen(request, timeout=20) as response:
         final_host = _safe_host(response.geturl())
         if final_host != allowed_host and not final_host.endswith(f".{allowed_host}") and not allowed_host.endswith(f".{final_host}"):
@@ -84,8 +114,9 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         checked += 1
         now = utc_now()
         try:
-            body, headers = _fetch(source["url"])
-            digest = _content_digest(body, headers.get("content-type", ""))
+            source_kind = source.get("sourceKind", "WEB")
+            body, headers = _fetch(source["url"], source_kind)
+            digest = _content_digest(body, headers.get("content-type", ""), source_kind)
             store.update(source["PK"], source["SK"], "SET lastCheckedAt=:now, lastHttpStatus=:status, lastError=:empty", {":now": now, ":status": 200, ":empty": ""})
             if digest in {source.get("contentSha256"), source.get("observedSha256")}:
                 continue
@@ -103,6 +134,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             changed += 1
         except Exception as exc:
             failed += 1
-            LOGGER.exception("Source check failed sourceId=%s", source.get("sourceId"))
-            store.update(source["PK"], source["SK"], "SET lastCheckedAt=:now, lastError=:error", {":now": now, ":error": str(exc)[:1000]})
+            error = _safe_error(exc)
+            LOGGER.error("Source check failed sourceId=%s error=%s", source.get("sourceId"), error)
+            store.update(source["PK"], source["SK"], "SET lastCheckedAt=:now, lastError=:error", {":now": now, ":error": error})
     return {"checked": checked, "changed": changed, "failed": failed}

@@ -1,0 +1,111 @@
+{
+  "startedAt": "2026-09-19T20:56:35.239Z",
+  "baseUrl": "http://localhost:3000",
+  "syntheticIdentity": "Aarav Mehta",
+  "scheme": "pm-usp-csss",
+  "routes": [
+    {
+      "route": "dashboard",
+      "url": "http://localhost:3000/dashboard",
+      "at": "2026-09-19T20:56:40.043Z"
+    },
+    {
+      "route": "schemes",
+      "url": "http://localhost:3000/schemes",
+      "at": "2026-09-19T20:56:40.392Z"
+    },
+    {
+      "route": "draft",
+      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/documents",
+      "at": "2026-09-19T20:56:40.966Z"
+    },
+    {
+      "route": "documents",
+      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/edit",
+      "at": "2026-09-19T20:56:43.740Z"
+    },
+    {
+      "route": "check",
+      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/check",
+      "at": "2026-09-19T20:57:00.602Z"
+    },
+    {
+      "route": "review",
+      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/review",
+      "at": "2026-09-19T20:57:00.914Z"
+    },
+    {
+      "route": "tracking",
+      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/tracking",
+      "at": "2026-09-19T20:57:02.093Z"
+    },
+    {
+      "route": "diagnose",
+      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/diagnose",
+      "at": "2026-09-19T20:57:04.186Z"
+    },
+    {
+      "route": "repair-draft",
+      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/edit",
+      "at": "2026-09-19T20:57:09.654Z"
+    }
+  ],
+  "documents": [
+    {
+      "label": "Class XII marksheet",
+      "filename": "sevafix_mock_class_xii_marksheet.pdf"
+    },
+    {
+      "label": "Family income certificate",
+      "filename": "sevafix_mock_income_certificate.pdf"
+    },
+    {
+      "label": "Admission/course/institution evidence",
+      "filename": "sevafix_mock_admission_letter.pdf"
+    },
+    {
+      "label": "Identity evidence for consistency check",
+      "filename": "sevafix_mock_identity_proof.pdf"
+    }
+  ],
+  "screenshots": [
+    "artifacts/mock-run/01-dashboard.png",
+    "artifacts/mock-run/02-scheme-catalog.png",
+    "artifacts/mock-run/03-completed-draft.png",
+    "artifacts/mock-run/04-documents-processed.png",
+    "artifacts/mock-run/05-validation-results.png",
+    "artifacts/mock-run/06-frozen-version.png",
+    "artifacts/mock-run/07-tracking-timeline.png",
+    "artifacts/mock-run/08-diagnosis.png",
+    "artifacts/mock-run/09-repair-draft.png"
+  ],
+  "catalog": {
+    "count": 10,
+    "schemeNames": [
+      "Ayushman Bharat Pradhan Mantri Jan Arogya Yojana",
+      "National Social Assistance Programme",
+      "Pradhan Mantri Kisan Samman Nidhi",
+      "Prime Minister Street Vendor's AtmaNirbhar Nidhi",
+      "PM-USP Central Sector Scheme of Scholarship for College and University Students",
+      "PM Vishwakarma",
+      "Pradhan Mantri Awaas Yojana - Gramin",
+      "Pradhan Mantri Awas Yojana - Urban 2.0",
+      "Pradhan Mantri Matru Vandana Yojana",
+      "Pradhan Mantri Ujjwala Yojana"
+    ]
+  },
+  "applicationId": "app_26d200a3770140e5b394728523c2def7",
+  "documentPipeline": "PASS",
+  "documentPageText": "SevaFix\nDashboard\nNew application\nGrievance\nSettings\nSign out\npm-usp-csss\nReady (SevaFix checks)\nDraft\nDocuments\nCheck\nReview & freeze\nTracking\nDiagnose\nUpload evidence\nClass XII marksheet\nUpload\nFamily income certificate\nUpload\nAdmission/course/institution evidence\nUpload\nIdentity evidence for consistency check\nUpload\nYour documents\n\nIDENTITY_PROOF\n\n73 KB · application/pdf\n\nConfirmed\nView\nDelete\n\nINCOME_CERTIFICATE\n\n73 KB · application/pdf\n\nConfirmed\nView\nDelete\n\nMARKSHEET\n\n74 KB · application/pdf\n\nConfirmed\nView\nDelete\n\nADMISSION_LETTER\n\n73 KB · application/pdf\n\nConfirmed\nView\nDelete",
+  "validation": "13 passed · 0 failed · 0 need review · 0 blocked",
+  "frozenVersion": 1,
+  "tracking": {
+    "officialApplicationId": "NSP-MOCK-1789851422093",
+    "noteRecorded": true,
+    "externalSubmissionMade": false
+  },
+  "diagnosis": "Latest diagnosis\n\nMISSING DOCUMENT\n\nThe income certificate provided could not be verified against the policy requirements for fresh applicants.\n\nProvide a new, valid income certificate issued by a recognized authority and signed by the issuing officer.\nEnsure the income declared in the application matches the figures stated in the certificate.\nResubmit the application through the NSP portal once the verified certificate is attached.\n\nAI-assisted with openai.gpt-oss-20b; verified citations only.\n\nSources: C1, C2\nStart corrected application",
+  "repairDraftCreated": true,
+  "status": "PASS",
+  "completedAt": "2026-09-19T20:57:09.789Z"
+}
