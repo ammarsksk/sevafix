@@ -119,8 +119,8 @@ export default function Home() {
 
       <section id="schemes" className={styles.section} aria-labelledby="schemes-title">
         <div className={styles.container}>
-          <div className={styles.sectionIntro}><div><p className={styles.kicker}>Schemes</p><h2 id="schemes-title" className={styles.sectionTitle}>One scheme, supported deeply.</h2></div><p className={styles.sectionLede}>The scheme list uses the SevaFix catalog when it is available and falls back to the current reviewed manifest. More schemes are being onboarded.</p></div>
-          <div className="pb-20 lg:pb-28"><LandingSchemes /><p className="mt-5 text-sm text-[var(--ink-2)]">More schemes are being onboarded.</p></div>
+          <div className={styles.sectionIntro}><div><p className={styles.kicker}>Schemes</p><h2 id="schemes-title" className={styles.sectionTitle}>Ten schemes, supported with reviewed checks.</h2></div><p className={styles.sectionLede}>Prepare or diagnose an application using the active SevaFix catalog, versioned policy checks, scheme-specific forms, and required-evidence lists.</p></div>
+          <div className="pb-20 lg:pb-28"><LandingSchemes /><p className="mt-5 text-sm text-[var(--ink-2)]">Sign in to open a scheme and view its complete application workflow.</p></div>
         </div>
       </section>
 
