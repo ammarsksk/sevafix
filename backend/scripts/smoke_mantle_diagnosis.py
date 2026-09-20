@@ -23,7 +23,10 @@ def main() -> None:
     parser.add_argument("--profile", default="sevafix-deploy")
     parser.add_argument("--region", default="ap-south-1")
     parser.add_argument("--model", default="openai.gpt-oss-20b")
-    parser.add_argument("--artifact", default="artifacts/acceptance/mantle-diagnosis-latest.json")
+    parser.add_argument(
+        "--artifact",
+        default=str(Path(__file__).resolve().parents[2] / "artifacts" / "acceptance" / "mantle-diagnosis-latest.json"),
+    )
     args = parser.parse_args()
 
     session = boto3.Session(profile_name=args.profile, region_name=args.region)

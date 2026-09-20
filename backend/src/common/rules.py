@@ -115,7 +115,14 @@ def evaluate_rule(rule: dict[str, Any], facts: dict[str, Any], evidence_types: s
     if "otherField" in assertion:
         expected = get_path(facts, assertion["otherField"])
     status, message = compare(actual, assertion["op"], expected)
-    return {"status": status, "message": message, "actual": actual, "expected": expected}
+    return {
+        "status": status,
+        "message": message,
+        "actual": actual,
+        "expected": expected,
+        "actualField": assertion["field"],
+        "expectedField": assertion.get("otherField", "rule.value"),
+    }
 
 
 def readiness(results: list[dict[str, Any]]) -> dict[str, Any]:

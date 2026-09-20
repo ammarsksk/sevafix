@@ -1,0 +1,58 @@
+{
+  "startedAt": "2026-09-19T22:45:10Z",
+  "stack": "sevafix-dev",
+  "scenario": "FAULTY_INCOME_CERTIFICATE_NO_REJECTION_REASON",
+  "status": "PASS",
+  "applicationId": "app_4aecf989c5e046889894a01dc9165475",
+  "policyVersionId": "pm-usp-csss-2026-27.3",
+  "requiredDocuments": [
+    "IDENTITY_PROOF",
+    "MARKSHEET",
+    "INCOME_CERTIFICATE",
+    "ADMISSION_LETTER"
+  ],
+  "ocrStates": {
+    "IDENTITY_PROOF": "EXTRACTED",
+    "MARKSHEET": "NEEDS_USER_CONFIRMATION",
+    "INCOME_CERTIFICATE": "EXTRACTED",
+    "ADMISSION_LETTER": "EXTRACTED"
+  },
+  "faultInjected": {
+    "documentType": "INCOME_CERTIFICATE",
+    "declaredIncomeINR": 350000,
+    "documentIncomeINR": 900000
+  },
+  "faultDetected": {
+    "ruleId": "fresh-income-certificate-match",
+    "status": "FAIL"
+  },
+  "diagnosis": {
+    "usedModelId": "openai.gpt-oss-20b",
+    "citedSourceIds": [
+      "C1"
+    ],
+    "diagnosisId": "diag_984a019aca34417d8cc6560572c96b13",
+    "citations": [
+      {
+        "score": 3,
+        "citationId": "C1",
+        "uri": "https://scholarships.gov.in/public/schemeGuidelines/CSSS_GUIDLINES_07022024_updated.pdf"
+      }
+    ],
+    "diagnosisBasis": "INFERRED_FROM_CHECKS",
+    "category": "INCOME_MISMATCH",
+    "confidence": 0.86,
+    "summary": "The application form declares annual family income of INR 350000, while the uploaded income certificate states INR 900000. The values do not match. This is an inferred application issue, not an official rejection reason.",
+    "recommendedActions": [
+      "Confirm which income value is correct, then correct the form or replace the certificate before resubmitting."
+    ]
+  },
+  "repairId": "repair_035321645cca4b62a4620905e3bbaeda",
+  "correction": {
+    "replacementIncomeINR": 350000,
+    "ready": true,
+    "versionId": "v2"
+  },
+  "cleanup": "PASS",
+  "completedAt": "2026-09-19T22:46:30Z"
+}

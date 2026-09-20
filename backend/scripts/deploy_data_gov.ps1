@@ -19,7 +19,11 @@ if (-not (Test-Path -LiteralPath $sam)) {
     $sam = $samCommand.Source
 }
 if (-not (Test-Path -LiteralPath $python)) {
-    throw "Project Python environment was not found at $python"
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $pythonCommand) {
+        throw "Python was not found. Create .venv or add Python to PATH."
+    }
+    $python = $pythonCommand.Source
 }
 
 $secureKey = Read-Host "Paste your data.gov.in API key (input is hidden)" -AsSecureString
@@ -54,8 +58,11 @@ try {
             "Environment=dev" `
             "AllowedOrigin=$AllowedOrigin" `
             "EnableMalwareProtection=false" `
-            "EnableKnowledgeBase=true" `
-            "BedrockModelId=global.amazon.nova-2-lite-v1:0" `
+            "EnableKnowledgeBase=false" `
+            "ManagedKnowledgeBaseId=QDX1TUBOTV" `
+            "ManagedKnowledgeBaseDataSourceId=XEQOEY0VSA" `
+            "ManagedKnowledgeBaseRegion=ap-northeast-1" `
+            "ManagedKnowledgeBaseBucketName=sevafix-851725360556-ap-northeast-1-dev-managed-kb" `
             "BedrockMantleModelId=openai.gpt-oss-20b" `
             "DataGovApiKey=$dataGovKey"
     if ($LASTEXITCODE -ne 0) {

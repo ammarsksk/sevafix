@@ -5,8 +5,9 @@ const required = (name: string, value: string | undefined): string => {
   return value;
 };
 
-const oauthDomain = process.env.NEXT_PUBLIC_COGNITO_OAUTH_DOMAIN?.replace(/^https?:?\/\//, "").replace(/\/$/, "");
+const oauthDomain = process.env.NEXT_PUBLIC_COGNITO_OAUTH_DOMAIN?.replace(/^https?:\/\//, "").replace(/\/$/, "");
 const oauthRedirect = process.env.NEXT_PUBLIC_COGNITO_OAUTH_REDIRECT ?? "http://localhost:3000";
+export const isGoogleSignInConfigured = Boolean(oauthDomain);
 
 const authConfig: ResourcesConfig["Auth"] = {
   Cognito: {

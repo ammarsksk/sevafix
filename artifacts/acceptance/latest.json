@@ -1,12 +1,13 @@
 {
-  "startedAt": "2026-09-19T07:38:28Z",
+  "startedAt": "2026-09-20T00:50:21Z",
   "stack": "sevafix-dev",
   "region": "ap-south-1",
   "policy": {
-    "activeVersion": "pm-usp-csss-2026-27.2",
-    "ruleCount": 16,
+    "activeVersion": "pm-usp-csss-2026-27.3",
+    "ruleCount": 17,
     "claimCount": 12,
     "enabledSourceCount": 5,
+    "monitoredSourceCount": 19,
     "formFieldCount": 22,
     "freshDocumentCount": 6,
     "renewalDocumentCount": 4,
@@ -14,8 +15,8 @@
   },
   "workflows": {
     "officialSourceMonitor": {
-      "checked": 5,
-      "changed": 0,
+      "checked": 19,
+      "changed": 1,
       "failed": 0
     },
     "cognitoAuthentication": "PASS",
@@ -29,22 +30,22 @@
         "ADMISSION_LETTER": "EXTRACTED"
       },
       "initialBlocked": {
-        "passed": 6,
-        "needsReview": 0,
-        "blocked": 6,
-        "failed": 0,
-        "applicable": 12,
+        "ready": false,
         "label": "ACTION_REQUIRED",
-        "ready": false
+        "failed": 0,
+        "applicable": 13,
+        "blocked": 7,
+        "needsReview": 0,
+        "passed": 6
       },
       "ready": {
-        "passed": 12,
-        "ready": true,
-        "blocked": 0,
+        "applicable": 13,
         "failed": 0,
-        "applicable": 12,
         "label": "READY_WITH_SEVAFIX_CHECKS",
-        "needsReview": 0
+        "passed": 13,
+        "needsReview": 0,
+        "blocked": 0,
+        "ready": true
       },
       "versions": [
         "v1",
@@ -67,36 +68,67 @@
       },
       "ready": {
         "needsReview": 0,
-        "label": "READY_WITH_SEVAFIX_CHECKS",
         "passed": 12,
-        "failed": 0,
+        "ready": true,
         "blocked": 0,
+        "label": "READY_WITH_SEVAFIX_CHECKS",
         "applicable": 12,
-        "ready": true
+        "failed": 0
       },
       "version": "v1"
     },
     "policyReviewer": {
       "status": "PASS",
-      "pendingChangesSeen": 4,
+      "pendingChangesSeen": 21,
       "actions": [
         "APPROVE",
         "REJECT",
         "ROLLBACK_POINTER",
         "RESTORE_POINTER"
       ],
-      "activeVersionRestored": "pm-usp-csss-2026-27.2"
+      "activeVersionRestored": "pm-usp-csss-2026-27.3"
     },
     "notification": {
       "status": "PASS",
       "delivered": 1
     },
     "knowledgeBase": {
-      "embeddingModel": "amazon.titan-embed-text-v2:0",
-      "embeddingInvocation": "BLOCKED",
-      "embeddingError": "ValidationException: Operation not allowed",
-      "ingestion": "BLOCKED",
-      "ingestionError": "ValidationException: Knowledge base role arn:aws:iam::851725360556:role/sevafix-dev-bedrock-kb-role is not able to call specified bedrock embedding model arn:aws:bedrock:ap-south-1::foundation-model/amazon.titan-embed-text-v2:0: Operation not allowed (Service: BedrockRuntime, Status Code: 400, Request ID: 0d9f31ab-06ae-444f-9c9a-a92bb1d781bf) (SDK Attempt Count: 1)"
+      "knowledgeBaseRegion": "ap-northeast-1",
+      "knowledgeBaseType": "MANAGED",
+      "retriever": "BEDROCK_MANAGED_KNOWLEDGE_BASE",
+      "embeddingModel": "MANAGED_BY_BEDROCK",
+      "embeddingInvocation": "MANAGED_BY_BEDROCK",
+      "ingestionJobId": "TCEKGQ5I2R",
+      "ingestion": "COMPLETE",
+      "ingestionStatistics": {
+        "numberOfDocumentsScanned": 10,
+        "numberOfMetadataDocumentsScanned": 10,
+        "numberOfNewDocumentsIndexed": 0,
+        "numberOfModifiedDocumentsIndexed": 0,
+        "numberOfMetadataDocumentsModified": 0,
+        "numberOfDocumentsDeleted": 0,
+        "numberOfDocumentsFailed": 0
+      },
+      "ingestionFailureReasons": [],
+      "retrieval": "PASS",
+      "retrievalResultCount": 5,
+      "topRetrievalScore": 0.7104436755180359,
+      "topRetrievalUri": "https://sevafix-851725360556-ap-northeast-1-dev-managed-kb.s3.ap-northeast-1.amazonaws.com/published/pm-usp-csss/pm-usp-csss-2025-26.1/policy.md",
+      "topRetrievalMetadata": {
+        "_source_uri": "https://sevafix-851725360556-ap-northeast-1-dev-managed-kb.s3.ap-northeast-1.amazonaws.com/published/pm-usp-csss/pm-usp-csss-2025-26.1/policy.md",
+        "_chunk_id": "L6ILBsKmpovTQ-y9jqHeTksjppapS1joDtb1C2dFctQ",
+        "_data_source_type": "S3",
+        "policyVersionId": "pm-usp-csss-2025-26.1",
+        "_language_code": "en",
+        "_created_at": "2026-09-19T23:39:50Z",
+        "_data_source_id": "XEQOEY0VSA",
+        "schemeId": "pm-usp-csss",
+        "_file_type": "PLAIN_TEXT",
+        "_document_title": "policy.md",
+        "authority": "Ministry of Education / National Scholarship Portal",
+        "_last_updated_at": "2026-09-19T23:39:50Z",
+        "status": "PUBLISHED"
+      }
     },
     "accountAndDataDeletion": {
       "status": "PASS",
@@ -104,6 +136,6 @@
       "cognitoUserRemoved": true
     }
   },
-  "completedAt": "2026-09-19T07:41:50Z",
-  "overall": "PASS_WITH_EXTERNAL_BEDROCK_BLOCKER"
+  "completedAt": "2026-09-20T00:54:39Z",
+  "overall": "PASS"
 }

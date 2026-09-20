@@ -168,7 +168,8 @@ def main() -> None:
 
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2, ensure_ascii=False, default=str) + "\n", encoding="utf-8")
-    print(json.dumps(report, indent=2, ensure_ascii=False, default=str))
+    # Keep CLI output portable on Windows consoles that still default to cp1252.
+    print(json.dumps(report, indent=2, ensure_ascii=True, default=str))
 
 
 if __name__ == "__main__":

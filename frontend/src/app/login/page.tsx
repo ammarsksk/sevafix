@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 
 import { Button, Card, ErrorBanner, PageHeader, TextField } from "@/components/ui";
+import { isGoogleSignInConfigured } from "@/lib/sevafix/amplify-auth";
 import { useAuth } from "@/lib/sevafix/auth-context";
 
 export default function LoginPage() {
@@ -80,13 +81,17 @@ function LoginForm() {
           <Button type="submit" className="w-full" loading={loading}>
             Log in
           </Button>
-          <div className="relative py-1 text-center text-xs text-slate-500">
-            <span className="bg-white px-2">or</span>
-            <span className="absolute inset-x-0 top-1/2 -z-10 border-t border-slate-200" />
-          </div>
-          <Button type="button" variant="secondary" className="w-full" loading={googleLoading} onClick={onGoogleSignIn}>
-            Continue with Google
-          </Button>
+          {isGoogleSignInConfigured ? (
+            <>
+              <div className="relative py-1 text-center text-xs text-slate-500">
+                <span className="bg-white px-2">or</span>
+                <span className="absolute inset-x-0 top-1/2 -z-10 border-t border-slate-200" />
+              </div>
+              <Button type="button" variant="secondary" className="w-full" loading={googleLoading} onClick={onGoogleSignIn}>
+                Continue with Google
+              </Button>
+            </>
+          ) : null}
         </form>
         <div className="mt-4 flex justify-between text-sm">
           <Link href="/forgot-password" className="text-slate-600 underline">

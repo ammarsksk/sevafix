@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 import boto3
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
+from botocore.exceptions import ParamValidationError
 
 from common import settings
 from common.store import Store
@@ -17,8 +18,7 @@ from common.util import new_id, utc_now
 
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
-agent_runtime = boto3.client("bedrock-agent-runtime")
-bedrock_runtime = boto3.client("bedrock-runtime")
+agent_runtime = boto3.client("bedrock-agent-runtime", region_name=settings.BEDROCK_KNOWLEDGE_BASE_REGION)
 
 CATEGORIES = {
     "MISSING_DOCUMENT", "INCOME_MISMATCH", "NAME_MISMATCH", "INELIGIBLE_COURSE",
@@ -45,10 +45,18 @@ def _fallback(reason: str, checks: list[dict[str, Any]]) -> dict[str, Any]:
     for check in failed:
         identity = " ".join(str(check.get(key, "")) for key in ("ruleId", "message", "messageKey")).casefold()
         if "income" in identity:
+            if check.get("ruleId") == "fresh-income-certificate-match" and check.get("actual") is not None and check.get("expected") is not None:
+                summary = (
+                    f"The application form declares annual family income of INR {check['actual']}, while the uploaded "
+                    f"income certificate states INR {check['expected']}. The values do not match. This is an inferred "
+                    "application issue, not an official rejection reason."
+                )
+            else:
+                summary = "The declared family income and the income-certificate value do not match."
             return {
                 "category": "INCOME_MISMATCH",
-                "summary": "The declared family income and the income-certificate value do not match.",
-                "recommendedActions": ["Replace or correct the income certificate, or correct the declared income before resubmitting."],
+                "summary": summary,
+                "recommendedActions": ["Confirm which income value is correct, then correct the form or replace the certificate before resubmitting."],
                 "confidence": 0.86,
             }
         if "name" in identity:
@@ -63,21 +71,50 @@ def _fallback(reason: str, checks: list[dict[str, Any]]) -> dict[str, Any]:
     return {"category": "UNKNOWN", "summary": reason[:500] or "The rejection reason could not be classified safely.", "recommendedActions": ["Ask the issuing authority for the exact rejection reason before changing the application."], "confidence": 0.3}
 
 
+def _signed_managed_retrieve(payload: dict[str, Any]) -> dict[str, Any]:
+    """Call the managed-search API when the Lambda runtime SDK model is older than the service."""
+    region = settings.BEDROCK_KNOWLEDGE_BASE_REGION
+    knowledge_base_id = settings.BEDROCK_KNOWLEDGE_BASE_ID
+    url = f"https://bedrock-agent-runtime.{region}.amazonaws.com/knowledgebases/{knowledge_base_id}/retrieve"
+    body = json.dumps(payload).encode("utf-8")
+    request = AWSRequest(method="POST", url=url, data=body, headers={"content-type": "application/json"})
+    credentials = boto3.Session().get_credentials().get_frozen_credentials()
+    SigV4Auth(credentials, "bedrock", region).add_auth(request)
+    with urlopen(Request(url, method="POST", data=body, headers=dict(request.headers)), timeout=30) as response:
+        return json.loads(response.read() or b"{}")
+
+
 def _retrieve(query: str, scheme_id: str, policy_version_id: str) -> list[dict[str, Any]]:
     if not settings.BEDROCK_KNOWLEDGE_BASE_ID:
         return []
     try:
-        result = agent_runtime.retrieve(
-            knowledgeBaseId=settings.BEDROCK_KNOWLEDGE_BASE_ID,
-            retrievalQuery={"text": query[:1000]},
-            retrievalConfiguration={"vectorSearchConfiguration": {
-                "numberOfResults": 8,
-                "filter": {"andAll": [
-                    {"equals": {"key": "schemeId", "value": scheme_id}},
-                    {"equals": {"key": "policyVersionId", "value": policy_version_id}},
-                ]},
-            }},
-        )
+        filter_expression = {"andAll": [
+            {"equals": {"key": "schemeId", "value": scheme_id}},
+            {"equals": {"key": "policyVersionId", "value": policy_version_id}},
+        ]}
+        if settings.BEDROCK_KNOWLEDGE_BASE_TYPE == "MANAGED":
+            payload = {
+                "knowledgeBaseId": settings.BEDROCK_KNOWLEDGE_BASE_ID,
+                "retrievalQuery": {"text": query[:1000]},
+                "retrievalConfiguration": {"managedSearchConfiguration": {
+                    "numberOfResults": 8,
+                    "rerankingModelType": "MANAGED",
+                    "filter": filter_expression,
+                }},
+            }
+            try:
+                result = agent_runtime.retrieve(**payload)
+            except ParamValidationError:
+                result = _signed_managed_retrieve({key: value for key, value in payload.items() if key != "knowledgeBaseId"})
+        else:
+            result = agent_runtime.retrieve(
+                knowledgeBaseId=settings.BEDROCK_KNOWLEDGE_BASE_ID,
+                retrievalQuery={"text": query[:1000]},
+                retrievalConfiguration={"vectorSearchConfiguration": {
+                    "numberOfResults": 8,
+                    "filter": filter_expression,
+                }},
+            )
     except Exception:
         LOGGER.exception("Knowledge base retrieval failed; diagnosis will fail closed to deterministic rules")
         return []
@@ -146,25 +183,13 @@ def _mantle_response(prompt: str) -> str:
 
 
 def _ai_diagnose(reason: str, checks: list[dict[str, Any]], passages: list[dict[str, Any]]) -> dict[str, Any] | None:
-    if not passages or not (settings.BEDROCK_MANTLE_MODEL_ID or settings.BEDROCK_MODEL_ID):
+    if not passages or not settings.BEDROCK_MANTLE_MODEL_ID:
         return None
     evidence = "\n\n".join(f"[{p['citationId']}] {p['text']}" for p in passages)
-    prompt = f"""You diagnose an Indian government benefit application rejection. Use only SOURCE text and failed checks. Never claim SevaFix is the issuing authority. Return JSON only with keys category, summary, recommendedActions (array), citedSourceIds (array), confidence (0..1). category must be one of {sorted(CATEGORIES)}. If evidence is insufficient use UNKNOWN.\n\nREJECTION:\n{_redact_for_ai(reason[:3000])}\n\nFAILED CHECKS:\n{json.dumps(checks, default=str)[:5000]}\n\nSOURCES:\n{evidence[:14000]}"""
+    prompt = f"""You diagnose an Indian government benefit application rejection. Use only SOURCE text and failed checks. Never claim SevaFix is the issuing authority. In each failed check, actual is the value from actualField and expected is the value from expectedField (or a literal policy rule value). For equality checks, expected is a comparison value, not automatically a minimum or eligibility threshold. Do not reverse, relabel, or invent the meaning of either value. Return JSON only with keys category, summary, recommendedActions (array), citedSourceIds (array), confidence (0..1). category must be one of {sorted(CATEGORIES)}. If evidence is insufficient use UNKNOWN.\n\nREJECTION:\n{_redact_for_ai(reason[:3000])}\n\nFAILED CHECKS:\n{json.dumps(checks, default=str)[:5000]}\n\nSOURCES:\n{evidence[:14000]}"""
     try:
-        if settings.BEDROCK_MANTLE_MODEL_ID:
-            raw = _mantle_response(prompt)
-            used_model_id = settings.BEDROCK_MANTLE_MODEL_ID
-        else:
-            kwargs: dict[str, Any] = {
-                "modelId": settings.BEDROCK_MODEL_ID,
-                "messages": [{"role": "user", "content": [{"text": prompt}]}],
-                "inferenceConfig": {"maxTokens": 1000, "temperature": 0.0},
-            }
-            if settings.BEDROCK_GUARDRAIL_ID:
-                kwargs["guardrailConfig"] = {"guardrailIdentifier": settings.BEDROCK_GUARDRAIL_ID, "guardrailVersion": settings.BEDROCK_GUARDRAIL_VERSION, "trace": "enabled"}
-            answer = bedrock_runtime.converse(**kwargs)
-            raw = answer["output"]["message"]["content"][0]["text"]
-            used_model_id = settings.BEDROCK_MODEL_ID
+        raw = _mantle_response(prompt)
+        used_model_id = settings.BEDROCK_MANTLE_MODEL_ID
         match = re.search(r"\{.*\}", raw, re.DOTALL)
         parsed = json.loads(match.group(0) if match else raw)
         category = str(parsed.get("category", "")).strip().upper()
@@ -221,13 +246,17 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     result = _ai_diagnose(reason, failed, passages) or _fallback(reason, failed)
     if not authority_reason_provided:
         deterministic = _fallback("", failed)
-        if deterministic["category"] not in {"UNKNOWN", "APPLICATION_DATA_ERROR"} and result.get("category") != deterministic["category"]:
-            LOGGER.warning(
-                "AI category %s contradicted deterministic check category %s; deterministic result wins",
-                result.get("category"),
-                deterministic["category"],
-            )
-            result.update(deterministic)
+        if deterministic["category"] not in {"UNKNOWN", "APPLICATION_DATA_ERROR"}:
+            if result.get("category") != deterministic["category"]:
+                LOGGER.warning(
+                    "AI category %s contradicted deterministic check category %s; deterministic result wins",
+                    result.get("category"),
+                    deterministic["category"],
+                )
+            # With no authority-provided reason, deterministic check facts are the
+            # source of truth. Keep AI provenance/citations, but never let model
+            # prose reverse or invent the meaning of compared values.
+            result.update({key: deterministic[key] for key in ("category", "summary", "recommendedActions", "confidence")})
     result["diagnosisBasis"] = "PROVIDED_REASON" if authority_reason_provided else "INFERRED_FROM_CHECKS"
     citation_ids = set(result.get("citedSourceIds", []))
     result["citations"] = [{k: p.get(k) for k in ("citationId", "uri", "score")} for p in passages if p["citationId"] in citation_ids]
@@ -236,7 +265,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         "PK": f"APP#{app_id}", "SK": f"DIAG#{event['diagnosisId']}", "entityType": "Diagnosis",
         "diagnosisId": event["diagnosisId"], "applicationId": app_id, "policyVersionId": meta["policyVersionId"],
         "reasonText": reason[:10000], "result": result, "status": "COMPLETED", "createdAt": now,
-        "modelId": result.get("usedModelId") or settings.BEDROCK_MODEL_ID or "deterministic-fallback",
+        "modelId": result.get("usedModelId") or "deterministic-fallback",
     }
     store.put(item, condition="attribute_not_exists(PK)")
     store.append_event(app_id, "REJECTION_DIAGNOSED", "SYSTEM", {"diagnosisId": event["diagnosisId"], "category": result["category"]}, event_id=new_id("evt"), occurred_at=now)

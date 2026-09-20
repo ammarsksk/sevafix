@@ -9,4 +9,4 @@ profile = "sevafix-deploy"
 capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
 confirm_changeset = false
 fail_on_empty_changeset = false
-parameter_overrides = "Environment=dev AllowedOrigin=http://localhost:3000 EnableMalwareProtection=false EnableKnowledgeBase=true BedrockModelId=global.amazon.nova-2-lite-v1:0 BedrockMantleModelId=openai.gpt-oss-20b"
+parameter_overrides = "Environment=dev AllowedOrigin=http://localhost:3000 EnableMalwareProtection=false EnableKnowledgeBase=false ManagedKnowledgeBaseId=QDX1TUBOTV ManagedKnowledgeBaseDataSourceId=XEQOEY0VSA ManagedKnowledgeBaseRegion=ap-northeast-1 ManagedKnowledgeBaseBucketName=sevafix-851725360556-ap-northeast-1-dev-managed-kb BedrockMantleModelId=openai.gpt-oss-20b"

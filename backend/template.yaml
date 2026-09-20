@@ -16,11 +16,20 @@ Parameters:
     AllowedValues: ['true', 'false']
   EnableKnowledgeBase:
     Type: String
-    Default: 'true'
+    Default: 'false'
     AllowedValues: ['true', 'false']
-  BedrockModelId:
+  ManagedKnowledgeBaseId:
     Type: String
-    Default: global.amazon.nova-2-lite-v1:0
+    Default: ''
+  ManagedKnowledgeBaseDataSourceId:
+    Type: String
+    Default: ''
+  ManagedKnowledgeBaseRegion:
+    Type: String
+    Default: ap-northeast-1
+  ManagedKnowledgeBaseBucketName:
+    Type: String
+    Default: ''
   BedrockMantleModelId:
     Type: String
     Default: openai.gpt-oss-20b
@@ -41,6 +50,13 @@ Parameters:
 Conditions:
   MalwareEnabled: !Equals [!Ref EnableMalwareProtection, 'true']
   KnowledgeBaseEnabled: !Equals [!Ref EnableKnowledgeBase, 'true']
+  ManagedKnowledgeBaseEnabled: !And
+    - !Not [!Equals [!Ref ManagedKnowledgeBaseId, '']]
+    - !Not [!Equals [!Ref ManagedKnowledgeBaseDataSourceId, '']]
+    - !Not [!Equals [!Ref ManagedKnowledgeBaseBucketName, '']]
+  AnyKnowledgeBaseEnabled: !Or
+    - !Condition KnowledgeBaseEnabled
+    - !Condition ManagedKnowledgeBaseEnabled
   GoogleConfigured: !And [!Not [!Equals [!Ref GoogleClientId, '']], !Not [!Equals [!Ref GoogleClientSecret, '']]]
 
 Globals:
@@ -60,10 +76,12 @@ Globals:
         USER_POOL_ID: !Ref UserPool
         ALLOWED_ORIGIN: !Ref AllowedOrigin
         MALWARE_PROTECTION_ENABLED: !Ref EnableMalwareProtection
-        BEDROCK_MODEL_ID: !Ref BedrockModelId
         BEDROCK_MANTLE_MODEL_ID: !Ref BedrockMantleModelId
-        BEDROCK_KNOWLEDGE_BASE_ID: !If [KnowledgeBaseEnabled, !Ref PolicyKnowledgeBase, '']
-        BEDROCK_DATA_SOURCE_ID: !If [KnowledgeBaseEnabled, !GetAtt PolicyDataSource.DataSourceId, '']
+        BEDROCK_KNOWLEDGE_BASE_ID: !If [ManagedKnowledgeBaseEnabled, !Ref ManagedKnowledgeBaseId, !If [KnowledgeBaseEnabled, !Ref PolicyKnowledgeBase, '']]
+        BEDROCK_DATA_SOURCE_ID: !If [ManagedKnowledgeBaseEnabled, !Ref ManagedKnowledgeBaseDataSourceId, !If [KnowledgeBaseEnabled, !GetAtt PolicyDataSource.DataSourceId, '']]
+        BEDROCK_KNOWLEDGE_BASE_REGION: !If [ManagedKnowledgeBaseEnabled, !Ref ManagedKnowledgeBaseRegion, !Ref AWS::Region]
+        BEDROCK_KNOWLEDGE_BASE_TYPE: !If [ManagedKnowledgeBaseEnabled, MANAGED, VECTOR]
+        BEDROCK_KNOWLEDGE_BASE_BUCKET: !If [ManagedKnowledgeBaseEnabled, !Ref ManagedKnowledgeBaseBucketName, '']
         NOTIFICATION_TOPIC_ARN: !Ref NotificationTopic
         DATA_GOV_API_KEY: !Ref DataGovApiKey
   HttpApi:
@@ -217,12 +235,11 @@ Resources:
       UserPoolId: !Ref UserPool
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
-    DependsOn: [GoogleIdentityProvider, UserPoolDomain]
     Properties:
       ClientName: !Sub sevafix-web-${Environment}
       UserPoolId: !Ref UserPool
       GenerateSecret: false
-      SupportedIdentityProviders: !If [GoogleConfigured, [COGNITO, Google], [COGNITO]]
+      SupportedIdentityProviders: !If [GoogleConfigured, [COGNITO, !Ref GoogleIdentityProvider], [COGNITO]]
       CallbackURLs: [!Ref GoogleCallbackUrl]
       LogoutURLs: [!Ref GoogleCallbackUrl]
       AllowedOAuthFlowsUserPoolClient: !If [GoogleConfigured, true, false]
@@ -298,6 +315,12 @@ Resources:
             - {Effect: Allow, Action: ['states:StartExecution'], Resource: !Sub 'arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:sevafix-${Environment}-document-pipeline'}
             - {Effect: Allow, Action: ['lambda:InvokeFunction'], Resource: [!GetAtt ValidationFunction.Arn, !GetAtt DiagnosisFunction.Arn, !GetAtt DeletionFunction.Arn]}
             - {Effect: Allow, Action: ['bedrock:StartIngestionJob'], Resource: '*'}
+            - !If
+              - ManagedKnowledgeBaseEnabled
+              - Effect: Allow
+                Action: [s3:PutObject]
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ManagedKnowledgeBaseBucketName}/published/*'
+              - !Ref AWS::NoValue
       Events:
         CorsPreflight:
           Type: HttpApi
@@ -355,9 +378,6 @@ Resources:
         - DynamoDBCrudPolicy: {TableName: !Ref DataTable}
         - Statement:
             - {Effect: Allow, Action: ['kms:Decrypt', 'kms:Encrypt', 'kms:GenerateDataKey', 'kms:DescribeKey'], Resource: !GetAtt DataKey.Arn}
-            - Effect: Allow
-              Action: ['bedrock:InvokeModel', 'bedrock:ApplyGuardrail']
-              Resource: '*'
             - Effect: Allow
               Action: ['bedrock-mantle:CreateInference']
               Resource: '*'
@@ -646,11 +666,24 @@ Outputs:
   ApiUrl: {Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}'}
   UserPoolId: {Value: !Ref UserPool}
   UserPoolClientId: {Value: !Ref UserPoolClient}
-  CognitoHostedUiDomain: {Value: !Sub 'https://sevafix-${Environment}-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com'}
+  CognitoHostedUiDomain: {Condition: GoogleConfigured, Value: !Sub 'https://sevafix-${Environment}-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com'}
   TableName: {Value: !Ref DataTable}
   CitizenBucketName: {Value: !Ref CitizenDocumentsBucket}
   PolicyBucketName: {Value: !Ref PolicyBucket}
   DocumentStateMachineArn: {Value: !Ref DocumentPipeline}
   NotificationQueueUrl: {Value: !Ref NotificationQueue}
-  KnowledgeBaseId: {Condition: KnowledgeBaseEnabled, Value: !Ref PolicyKnowledgeBase}
-  KnowledgeBaseDataSourceId: {Condition: KnowledgeBaseEnabled, Value: !GetAtt PolicyDataSource.DataSourceId}
+  KnowledgeBaseId:
+    Condition: AnyKnowledgeBaseEnabled
+    Value: !If [ManagedKnowledgeBaseEnabled, !Ref ManagedKnowledgeBaseId, !Ref PolicyKnowledgeBase]
+  KnowledgeBaseDataSourceId:
+    Condition: AnyKnowledgeBaseEnabled
+    Value: !If [ManagedKnowledgeBaseEnabled, !Ref ManagedKnowledgeBaseDataSourceId, !GetAtt PolicyDataSource.DataSourceId]
+  KnowledgeBaseRegion:
+    Condition: AnyKnowledgeBaseEnabled
+    Value: !If [ManagedKnowledgeBaseEnabled, !Ref ManagedKnowledgeBaseRegion, !Ref AWS::Region]
+  KnowledgeBaseType:
+    Condition: AnyKnowledgeBaseEnabled
+    Value: !If [ManagedKnowledgeBaseEnabled, MANAGED, VECTOR]
+  KnowledgeBasePolicyBucketName:
+    Condition: AnyKnowledgeBaseEnabled
+    Value: !If [ManagedKnowledgeBaseEnabled, !Ref ManagedKnowledgeBaseBucketName, !Ref PolicyBucket]

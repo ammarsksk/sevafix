@@ -10,7 +10,6 @@ The dev backend is deployed as CloudFormation stack `sevafix-dev` in `ap-south-1
 | Cognito user pool | `ap-south-1_WXRdiRGBo` |
 | Cognito app client | `2ijbnb082biogo3batf1shcput` |
 | DynamoDB table | `SevaFix-dev` |
-| Knowledge base | `JXV1YUBHLD` |
 | State machine | `sevafix-dev-document-pipeline` |
 
 Bucket names and all current outputs should be read from CloudFormation rather than copied into application configuration:
@@ -27,9 +26,9 @@ aws cloudformation describe-stacks --stack-name sevafix-dev --profile sevafix-de
 - Encrypted, private, versioned citizen and policy S3 buckets; short-lived regional SigV4 upload/view URLs; declared byte size, MIME type, metadata, and SHA-256 checksum verification.
 - Step Functions + Textract asynchronous OCR/query extraction, raw output preservation, low-confidence confirmation, explicit unsupported-language/manual-entry state, and automatic post-OCR validation.
 - Deterministic version-pinned rule engine with evidence requirements and pass/fail/review/blocked states.
-- Bedrock Mantle diagnosis using `openai.gpt-oss-20b` in Mumbai, SigV4, `store: false`, PII redaction, verified-claim citations, and deterministic fail-closed behavior. The prepared Knowledge Base/S3 Vectors path becomes the preferred retriever when Titan authorization is available; reviewed DynamoDB claims are used meanwhile.
+- Bedrock Mantle diagnosis using `openai.gpt-oss-20b` in Mumbai, SigV4, `store: false`, PII redaction, verified DynamoDB claim citations, and deterministic fail-closed behavior. No restricted foundation-model invocation is required.
 - Daily HTTPS-only official-source monitoring with public-IP and redirect-host checks, snapshot hashes, duplicate suppression, and human review queue.
-- Reviewer approve/reject, immutable policy publication, audited active-pointer rollback, and KB ingestion kickoff.
+- Reviewer approve/reject, immutable policy publication, and audited active-pointer rollback.
 - Repair/V2 cloning, manual official-submission tracking, timelines, notification SQS/DLQ/SNS worker, account deletion, CloudWatch logs/alarm, X-Ray, PITR, KMS, and optional GuardDuty malware scanning.
 
 ## Main API routes
@@ -69,7 +68,7 @@ python -m pytest -c backend\pytest.ini backend\tests
 sam validate --template-file backend\template.yaml --lint --region ap-south-1 --profile sevafix-deploy
 sam build --template-file backend\template.yaml --build-dir backend\.aws-sam\build --cached
 cd backend
-sam deploy --template-file .aws-sam\build\template.yaml --stack-name sevafix-dev --resolve-s3 --s3-prefix sevafix-dev --region ap-south-1 --profile sevafix-deploy --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --no-confirm-changeset --no-fail-on-empty-changeset --parameter-overrides Environment=dev AllowedOrigin=http://localhost:3000 EnableMalwareProtection=false EnableKnowledgeBase=true BedrockModelId=global.amazon.nova-2-lite-v1:0 BedrockMantleModelId=openai.gpt-oss-20b
+sam deploy --template-file .aws-sam\build\template.yaml --stack-name sevafix-dev --resolve-s3 --s3-prefix sevafix-dev --region ap-south-1 --profile sevafix-deploy --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --no-confirm-changeset --no-fail-on-empty-changeset --parameter-overrides Environment=dev AllowedOrigin=http://localhost:3000 EnableMalwareProtection=false EnableKnowledgeBase=false ManagedKnowledgeBaseId=QDX1TUBOTV ManagedKnowledgeBaseDataSourceId=XEQOEY0VSA ManagedKnowledgeBaseRegion=ap-northeast-1 ManagedKnowledgeBaseBucketName=sevafix-851725360556-ap-northeast-1-dev-managed-kb BedrockMantleModelId=openai.gpt-oss-20b
 cd ..
 python backend\scripts\seed.py --stack sevafix-dev --profile sevafix-deploy --region ap-south-1
 python backend\scripts\smoke_mantle_diagnosis.py --stack sevafix-dev --profile sevafix-deploy --region ap-south-1
@@ -81,7 +80,7 @@ The live smoke script creates a disposable Cognito user and application, validat
 ## Account-level feature gates
 
 - Bedrock generative inference is deployed and live through the Mantle Responses API with `openai.gpt-oss-20b`; the focused disposable-user smoke test is recorded in `artifacts/acceptance/mantle-diagnosis-latest.json`.
-- This account still reports `authorizationStatus: NOT_AUTHORIZED` for Titan Text Embeddings V2, so managed Knowledge Base ingestion cannot run. Diagnosis remains AI-powered by retrieving reviewed claims from DynamoDB and automatically uses the Knowledge Base when Titan is later authorized.
+- A Bedrock Managed Knowledge Base in `ap-northeast-1` supplies service-managed embeddings, hybrid retrieval, and reranking without requiring direct Titan model access. GPT-OSS performs the cited diagnosis, with reviewed DynamoDB claims retained as a fail-closed fallback.
 - GuardDuty Malware Protection resources are defined but `EnableMalwareProtection=false` in dev because enabling it creates per-object scanning charges. Set it to `true` only after cost approval.
 - SNS is deployed and the notification worker is verified, but no email/SMS subscription is created without a destination and opt-in.
 

@@ -230,28 +230,42 @@ def invoke_json(lambda_client: Any, function_name: str, payload: dict[str, Any])
 
 
 def exercise_knowledge_base(session: boto3.Session, outputs: dict[str, str]) -> dict[str, Any]:
-    result: dict[str, Any] = {"embeddingModel": "amazon.titan-embed-text-v2:0"}
-    try:
-        runtime = session.client("bedrock-runtime")
-        response = runtime.invoke_model(
-            modelId=result["embeddingModel"],
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps({"inputText": "PM-USP verified policy ingestion acceptance check"}),
-        )
-        embedding = json.loads(response["body"].read())
-        result["embeddingInvocation"] = "PASS"
-        result["embeddingDimensions"] = len(embedding.get("embedding", []))
-    except ClientError as exc:
-        error = exc.response.get("Error", {})
-        result["embeddingInvocation"] = "BLOCKED"
-        result["embeddingError"] = f"{error.get('Code')}: {error.get('Message')}"
-
     if not outputs.get("KnowledgeBaseId") or not outputs.get("KnowledgeBaseDataSourceId"):
-        result["ingestion"] = "NOT_CONFIGURED"
-        return result
+        return {
+            "retriever": "DYNAMODB_VERIFIED_CLAIMS",
+            "embeddingInvocation": "NOT_REQUIRED",
+            "ingestion": "NOT_CONFIGURED",
+        }
+    knowledge_region = outputs.get("KnowledgeBaseRegion", session.region_name or "ap-south-1")
+    knowledge_type = outputs.get("KnowledgeBaseType", "VECTOR")
+    result: dict[str, Any] = {
+        "knowledgeBaseRegion": knowledge_region,
+        "knowledgeBaseType": knowledge_type,
+        "retriever": "BEDROCK_MANAGED_KNOWLEDGE_BASE" if knowledge_type == "MANAGED" else "BEDROCK_VECTOR_KNOWLEDGE_BASE",
+    }
+    if knowledge_type == "MANAGED":
+        result["embeddingModel"] = "MANAGED_BY_BEDROCK"
+        result["embeddingInvocation"] = "MANAGED_BY_BEDROCK"
+    else:
+        result["embeddingModel"] = "amazon.titan-embed-text-v2:0"
+        try:
+            runtime = session.client("bedrock-runtime", region_name=knowledge_region)
+            response = runtime.invoke_model(
+                modelId=result["embeddingModel"],
+                contentType="application/json",
+                accept="application/json",
+                body=json.dumps({"inputText": "PM-USP verified policy ingestion acceptance check"}),
+            )
+            embedding = json.loads(response["body"].read())
+            result["embeddingInvocation"] = "PASS"
+            result["embeddingDimensions"] = len(embedding.get("embedding", []))
+        except ClientError as exc:
+            error = exc.response.get("Error", {})
+            result["embeddingInvocation"] = "BLOCKED"
+            result["embeddingError"] = f"{error.get('Code')}: {error.get('Message')}"
+
     try:
-        client = session.client("bedrock-agent")
+        client = session.client("bedrock-agent", region_name=knowledge_region)
         job = client.start_ingestion_job(
             knowledgeBaseId=outputs["KnowledgeBaseId"],
             dataSourceId=outputs["KnowledgeBaseDataSourceId"],
@@ -272,10 +286,28 @@ def exercise_knowledge_base(session: boto3.Session, outputs: dict[str, str]) -> 
         result["ingestion"] = job["status"]
         result["ingestionStatistics"] = job.get("statistics", {})
         result["ingestionFailureReasons"] = job.get("failureReasons", [])
+        if job["status"] == "COMPLETE":
+            runtime = session.client("bedrock-agent-runtime", region_name=knowledge_region)
+            retrieval = runtime.retrieve(
+                knowledgeBaseId=outputs["KnowledgeBaseId"],
+                retrievalQuery={"text": "What income certificate problem can cause a PM-USP scholarship application to fail?"},
+            )
+            retrieval_results = retrieval.get("retrievalResults", [])
+            if not retrieval_results:
+                raise AssertionError("Managed Knowledge Base returned no verified policy evidence")
+            top = retrieval_results[0]
+            result["retrieval"] = "PASS"
+            result["retrievalResultCount"] = len(retrieval_results)
+            result["topRetrievalScore"] = top.get("score")
+            result["topRetrievalUri"] = top.get("location", {}).get("s3Location", {}).get("uri")
+            result["topRetrievalMetadata"] = top.get("metadata", {})
     except ClientError as exc:
         error = exc.response.get("Error", {})
         result["ingestion"] = "BLOCKED"
         result["ingestionError"] = f"{error.get('Code')}: {error.get('Message')}"
+    except AssertionError as exc:
+        result["retrieval"] = "FAILED"
+        result["retrievalError"] = str(exc)
     return result
 
 
@@ -284,7 +316,11 @@ def main() -> None:
     parser.add_argument("--stack", default="sevafix-dev")
     parser.add_argument("--profile", default="sevafix-deploy")
     parser.add_argument("--region", default="ap-south-1")
-    parser.add_argument("--report", type=Path, default=Path("artifacts/acceptance/latest.json"))
+    parser.add_argument(
+        "--report",
+        type=Path,
+        default=Path(__file__).resolve().parents[2] / "artifacts" / "acceptance" / "latest.json",
+    )
     args = parser.parse_args()
 
     session = boto3.Session(profile_name=args.profile, region_name=args.region)
@@ -309,7 +345,7 @@ def main() -> None:
         )
         report["workflows"]["officialSourceMonitor"] = source_monitor
         assert source_monitor["failed"] == 0, source_monitor
-        assert source_monitor["checked"] == 5, source_monitor
+        assert source_monitor["checked"] >= 5, source_monitor
 
         scheme = table.get_item(
             Key={"PK": "SCHEME#pm-usp-csss", "SK": "META"},
@@ -332,18 +368,21 @@ def main() -> None:
             ConsistentRead=True,
         )["Items"]
         enabled_sources = [source for source in sources if source.get("enabled", True)]
+        enabled_policy_sources = [source for source in enabled_sources if source.get("schemeId") == "pm-usp-csss"]
         report["policy"] = {
             "activeVersion": active_version,
             "ruleCount": len(rules),
             "claimCount": len(claims),
-            "enabledSourceCount": len(enabled_sources),
+            "enabledSourceCount": len(enabled_policy_sources),
+            "monitoredSourceCount": len(enabled_sources),
             "formFieldCount": sum(len(section["fields"]) for section in scheme["formSchema"]["sections"]),
             "freshDocumentCount": len(scheme["documentChecklist"]["FRESH"]),
             "renewalDocumentCount": len(scheme["documentChecklist"]["RENEWAL"]),
             "liveWindowVerificationState": scheme["liveWindow"]["verificationState"],
         }
         assert active_version == "pm-usp-csss-2026-27.3", report["policy"]
-        assert len(rules) == 17 and len(claims) == 12 and len(enabled_sources) == 5
+        assert len(rules) == 17 and len(claims) == 12 and len(enabled_policy_sources) == 5
+        assert source_monitor["checked"] == len(enabled_sources), source_monitor
         assert report["policy"]["renewalDocumentCount"] == 4
 
         citizen_name, citizen_sub, citizen_token = create_user(
@@ -580,6 +619,7 @@ def main() -> None:
             "PASS_WITH_EXTERNAL_BEDROCK_BLOCKER"
             if report["workflows"]["knowledgeBase"].get("ingestion") in {"BLOCKED", "FAILED"}
             or report["workflows"]["knowledgeBase"].get("embeddingInvocation") == "BLOCKED"
+            or report["workflows"]["knowledgeBase"].get("retrieval") == "FAILED"
             else "PASS"
         )
     finally:

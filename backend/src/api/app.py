@@ -37,7 +37,9 @@ AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 s3 = boto3.client("s3", region_name=AWS_REGION, config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}))
 sfn = boto3.client("stepfunctions")
 lambda_client = boto3.client("lambda")
-bedrock_agent = boto3.client("bedrock-agent")
+knowledge_base_region = settings.BEDROCK_KNOWLEDGE_BASE_REGION or AWS_REGION
+knowledge_s3 = boto3.client("s3", region_name=knowledge_base_region, config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}))
+bedrock_agent = boto3.client("bedrock-agent", region_name=knowledge_base_region)
 
 RULE_OPERATORS = {"PRESENT", "EQ", "NEQ", "LT", "LTE", "GT", "GTE", "IN", "NOT_IN", "DATE_BETWEEN", "NAME_SIMILAR"}
 
@@ -507,6 +509,9 @@ def _publish_policy(store: Store, version_id: str, reviewer_sub: str, body: dict
     metadata = {"metadataAttributes": {"schemeId": scheme_id, "policyVersionId": version_id, "reviewState": "PUBLISHED", "authority": str(body.get("authority", "Official source"))[:128]}}
     s3.put_object(Bucket=settings.POLICY_BUCKET, Key=key, Body=policy_text.encode("utf-8"), ContentType="text/markdown")
     s3.put_object(Bucket=settings.POLICY_BUCKET, Key=f"{key}.metadata.json", Body=json.dumps(metadata).encode("utf-8"), ContentType="application/json")
+    if settings.BEDROCK_KNOWLEDGE_BASE_BUCKET and settings.BEDROCK_KNOWLEDGE_BASE_BUCKET != settings.POLICY_BUCKET:
+        knowledge_s3.put_object(Bucket=settings.BEDROCK_KNOWLEDGE_BASE_BUCKET, Key=key, Body=policy_text.encode("utf-8"), ContentType="text/markdown")
+        knowledge_s3.put_object(Bucket=settings.BEDROCK_KNOWLEDGE_BASE_BUCKET, Key=f"{key}.metadata.json", Body=json.dumps(metadata).encode("utf-8"), ContentType="application/json")
     policy = {
         "PK": f"POLICY#{scheme_id}", "SK": f"VERSION#{version_id}", "entityType": "PolicyVersion",
         "schemeId": scheme_id, "policyVersionId": version_id, "status": "PUBLISHED",

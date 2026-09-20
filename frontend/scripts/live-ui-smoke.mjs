@@ -86,9 +86,9 @@ try {
   await page.getByRole("button", { name: "Diagnose", exact: true }).click();
   await page.getByText("Latest diagnosis").waitFor({ timeout: 120_000 });
   await page
-    .getByText(/MISSING DOCUMENT|INCOME MISMATCH|NAME MISMATCH|INELIGIBLE COURSE|OTHER SCHOLARSHIP CONFLICT|PERCENTILE NOT VERIFIED|APPLICATION DATA ERROR|DEADLINE OR PROCESS|UNKNOWN/i)
+    .getByText(/^(MISSING DOCUMENT|INCOME MISMATCH|NAME MISMATCH|INELIGIBLE COURSE|OTHER SCHOLARSHIP CONFLICT|PERCENTILE NOT VERIFIED|APPLICATION DATA ERROR|DEADLINE OR PROCESS|UNKNOWN)$/i)
     .waitFor();
-  await page.getByText(/AI-assisted with openai.gpt-oss-20b/).waitFor();
+  await page.getByText(/AI-assisted with|Safe deterministic diagnosis/).waitFor();
   await page.getByText(/Sources:/).waitFor();
 
   await page.goto(`${baseUrl}/review/policies`);

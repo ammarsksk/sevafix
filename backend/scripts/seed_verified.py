@@ -208,6 +208,15 @@ def main() -> None:
     outputs = stack_outputs(session, args.stack)
     table = session.resource("dynamodb").Table(outputs["TableName"])
     s3 = session.client("s3")
+    policy_targets: list[tuple[Any, str]] = [(s3, outputs["PolicyBucketName"])]
+    knowledge_bucket = outputs.get("KnowledgeBasePolicyBucketName")
+    knowledge_region = outputs.get("KnowledgeBaseRegion", args.region)
+    if knowledge_bucket and knowledge_bucket != outputs["PolicyBucketName"]:
+        policy_targets.append((session.client("s3", region_name=knowledge_region), knowledge_bucket))
+
+    def upload_policy_object(*, key: str, body: bytes, content_type: str) -> None:
+        for client, bucket in policy_targets:
+            client.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)
 
     fetched: dict[str, dict[str, Any]] = {}
     for source in manifest["sources"]:
@@ -227,12 +236,11 @@ def main() -> None:
         "authority": scheme_data["authority"],
         "verifiedAt": version_data["verifiedAt"],
     }
-    s3.put_object(Bucket=outputs["PolicyBucketName"], Key=policy_key, Body=policy_text.encode("utf-8"), ContentType="text/markdown")
-    s3.put_object(
-        Bucket=outputs["PolicyBucketName"],
-        Key=f"{policy_key}.metadata.json",
-        Body=json.dumps({"metadataAttributes": metadata_attributes}, ensure_ascii=False).encode("utf-8"),
-        ContentType="application/json",
+    upload_policy_object(key=policy_key, body=policy_text.encode("utf-8"), content_type="text/markdown")
+    upload_policy_object(
+        key=f"{policy_key}.metadata.json",
+        body=json.dumps({"metadataAttributes": metadata_attributes}, ensure_ascii=False).encode("utf-8"),
+        content_type="application/json",
     )
 
     artifact_keys: list[str] = []
@@ -242,12 +250,7 @@ def main() -> None:
             extension = ".pdf" if fetched_source["body"].startswith(b"%PDF") else ".html"
             key = f"published/{scheme_id}/{version_id}/sources/{source['sourceId']}{extension}"
             artifact_keys.append(key)
-            s3.put_object(
-                Bucket=outputs["PolicyBucketName"],
-                Key=key,
-                Body=fetched_source["body"],
-                ContentType=fetched_source["contentType"],
-            )
+            upload_policy_object(key=key, body=fetched_source["body"], content_type=fetched_source["contentType"])
             source_metadata = {
                 "metadataAttributes": {
                     **metadata_attributes,
@@ -255,11 +258,10 @@ def main() -> None:
                     "sourceType": source["sourceType"],
                 }
             }
-            s3.put_object(
-                Bucket=outputs["PolicyBucketName"],
-                Key=f"{key}.metadata.json",
-                Body=json.dumps(source_metadata, ensure_ascii=False).encode("utf-8"),
-                ContentType="application/json",
+            upload_policy_object(
+                key=f"{key}.metadata.json",
+                body=json.dumps(source_metadata, ensure_ascii=False).encode("utf-8"),
+                content_type="application/json",
             )
 
     source_ids = [source["sourceId"] for source in manifest["sources"]]
@@ -371,7 +373,7 @@ def main() -> None:
     ingestion_error = None
     if not args.skip_ingestion and outputs.get("KnowledgeBaseId") and outputs.get("KnowledgeBaseDataSourceId"):
         try:
-            ingestion_job_id = session.client("bedrock-agent").start_ingestion_job(
+            ingestion_job_id = session.client("bedrock-agent", region_name=knowledge_region).start_ingestion_job(
                 knowledgeBaseId=outputs["KnowledgeBaseId"],
                 dataSourceId=outputs["KnowledgeBaseDataSourceId"],
                 description=f"Verified package {version_id} {package_hash[:12]}",

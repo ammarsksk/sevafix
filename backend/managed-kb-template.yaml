@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cross-region Bedrock Managed Knowledge Base for SevaFix policy retrieval.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedPattern: '[a-z0-9-]+'
+
+Resources:
+  ManagedPolicyBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub sevafix-${AWS::AccountId}-${AWS::Region}-${Environment}-managed-kb
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: {Status: Enabled}
+
+  ManagedKnowledgeBaseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub sevafix-${Environment}-managed-kb-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: bedrock.amazonaws.com}
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals: {aws:SourceAccount: !Ref 'AWS::AccountId'}
+              ArnLike: {aws:SourceArn: !Sub 'arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*'}
+      Policies:
+        - PolicyName: ReadManagedPolicySource
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [s3:ListBucket]
+                Resource: !GetAtt ManagedPolicyBucket.Arn
+              - Effect: Allow
+                Action: [s3:GetObject]
+                Resource: !Sub '${ManagedPolicyBucket.Arn}/published/*'
+
+  ManagedPolicyKnowledgeBase:
+    Type: AWS::Bedrock::KnowledgeBase
+    Properties:
+      Name: !Sub sevafix-${Environment}-managed-policy
+      Description: Managed semantic and keyword retrieval over verified SevaFix policy evidence.
+      RoleArn: !GetAtt ManagedKnowledgeBaseRole.Arn
+      KnowledgeBaseConfiguration:
+        Type: MANAGED
+        ManagedKnowledgeBaseConfiguration:
+          EmbeddingModelType: MANAGED
+
+  ManagedPolicyDataSource:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      Name: official-policy-documents
+      KnowledgeBaseId: !Ref ManagedPolicyKnowledgeBase
+      DataDeletionPolicy: DELETE
+      DataSourceConfiguration:
+        Type: MANAGED_KNOWLEDGE_BASE_CONNECTOR
+        ManagedKnowledgeBaseConnectorConfiguration:
+          DeletionProtectionConfiguration:
+            DeletionProtectionStatus: DISABLED
+          ConnectorParameters:
+            type: S3
+            version: '1'
+            connectionConfiguration:
+              bucketName: !Ref ManagedPolicyBucket
+              bucketOwnerAccountId: !Ref AWS::AccountId
+            filterConfiguration:
+              inclusionPrefixes: [published/]
+
+Outputs:
+  ManagedKnowledgeBaseId:
+    Value: !Ref ManagedPolicyKnowledgeBase
+  ManagedKnowledgeBaseRegion:
+    Value: !Ref AWS::Region
+  ManagedKnowledgeBaseDataSourceId:
+    Value: !GetAtt ManagedPolicyDataSource.DataSourceId
+  ManagedPolicyBucketName:
+    Value: !Ref ManagedPolicyBucket

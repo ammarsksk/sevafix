@@ -20,12 +20,46 @@ def test_income_mismatch_is_inferred_from_failed_check_without_rejection_reason(
     )
     assert result["category"] == "INCOME_MISMATCH"
     assert "income" in result["summary"].casefold()
+    assert "INR 350000" in result["summary"]
+    assert "certificate states INR 900000" in result["summary"]
 
 
 def test_retrieval_failure_fails_closed(monkeypatch):
     monkeypatch.setattr(handler.settings, "BEDROCK_KNOWLEDGE_BASE_ID", "kb-test")
+    monkeypatch.setattr(handler.settings, "BEDROCK_KNOWLEDGE_BASE_TYPE", "VECTOR")
     monkeypatch.setattr(handler.agent_runtime, "retrieve", lambda **kwargs: (_ for _ in ()).throw(RuntimeError("not ingested")))
     assert handler._retrieve("income mismatch", "scheme", "version") == []
+
+
+def test_managed_knowledge_base_retrieval_uses_managed_search_and_metadata_filter(monkeypatch):
+    captured = {}
+
+    class FakeRuntime:
+        def retrieve(self, **kwargs):
+            captured.update(kwargs)
+            return {
+                "retrievalResults": [{
+                    "content": {"text": "The income certificate must match the application."},
+                    "location": {"s3Location": {"uri": "s3://verified/policy.md"}},
+                    "score": 0.91,
+                }]
+            }
+
+    monkeypatch.setattr(handler.settings, "BEDROCK_KNOWLEDGE_BASE_ID", "kb-managed")
+    monkeypatch.setattr(handler.settings, "BEDROCK_KNOWLEDGE_BASE_TYPE", "MANAGED")
+    monkeypatch.setattr(handler, "agent_runtime", FakeRuntime())
+
+    passages = handler._retrieve("income mismatch", "scheme", "version")
+
+    configuration = captured["retrievalConfiguration"]["managedSearchConfiguration"]
+    assert configuration["rerankingModelType"] == "MANAGED"
+    assert configuration["filter"]["andAll"][0]["equals"] == {"key": "schemeId", "value": "scheme"}
+    assert passages == [{
+        "citationId": "S1",
+        "text": "The income certificate must match the application.",
+        "uri": "s3://verified/policy.md",
+        "score": 0.91,
+    }]
 
 
 def test_verified_claims_are_ranked_as_grounding_fallback():

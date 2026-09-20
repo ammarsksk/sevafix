@@ -1,5 +1,5 @@
 {
-  "testedAt": "2026-09-19T09:50:54Z",
+  "testedAt": "2026-09-20T00:55:48Z",
   "stack": "sevafix-dev",
   "region": "ap-south-1",
   "status": "PASS",
@@ -11,8 +11,8 @@
   "category": "INCOME_MISMATCH",
   "citationCount": 1,
   "citedSourceIds": [
-    "C1"
+    "S2"
   ],
   "temporaryUserDeletion": "PASS",
-  "deletionJobId": "job_4ed8e847c18246c7b12dc86bf9d92d68"
+  "deletionJobId": "job_94c5a2131422476bb271514d306ba98c"
 }
