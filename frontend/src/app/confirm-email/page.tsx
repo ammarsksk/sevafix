@@ -13,7 +13,6 @@ export default function ConfirmEmailPage() {
     </Suspense>
   );
 }
-
 function ConfirmEmailForm() {
   const { confirmEmail, resendConfirmationCode } = useAuth();
   const router = useRouter();
@@ -95,3 +94,4 @@ function ConfirmEmailForm() {
     </div>
   );
 }
+

@@ -1,0 +1,100 @@
+.console {
+  --paper: #10151b;
+  --sheet: #171e25;
+  --ink: #e8ecef;
+  --ink-2: #9da8b3;
+  --rule: #2b3540;
+  --rule-strong: #46525e;
+  --accent: #83b7b1;
+  --accent-hover: #a2cec9;
+  --accent-soft: #1d3335;
+  --evidence: #755f20;
+  --pass: #78b985;
+  --fail: #e0766b;
+  --review: #d4a550;
+  --neutral: #9da8b3;
+  --surface: var(--sheet);
+  --line: var(--rule);
+  --line-strong: var(--rule-strong);
+  --civic: var(--accent);
+  --civic-hover: var(--accent-hover);
+  --civic-soft: var(--accent-soft);
+  --success: var(--pass);
+  --success-soft: #183024;
+  --warning: var(--review);
+  --warning-soft: #332a18;
+  --danger: var(--fail);
+  --danger-soft: #351f20;
+  min-height: calc(100vh - 3.75rem);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+
+.shell { display: grid; min-height: calc(100vh - 3.75rem); }
+.rail { border-bottom: 1px solid var(--rule-strong); background: #0d1217; padding: 1rem; }
+.railLabel { color: var(--ink-2); font-family: var(--font-code); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.railTitle { margin-top: 0.4rem; color: var(--ink); font-family: var(--font-code); font-size: 0.88rem; font-weight: 600; }
+.railNav { display: flex; gap: 0.5rem; margin-top: 1rem; overflow-x: auto; }
+.railLink { display: inline-flex; min-height: 2.75rem; align-items: center; border-left: 2px solid transparent; padding: 0 0.75rem; color: var(--ink-2); font-family: var(--font-code); font-size: 0.875rem; white-space: nowrap; }
+.railLink:hover, .railLinkActive { border-left-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+.railNote { display: none; }
+.content { min-width: 0; padding: 1.25rem; }
+
+.masthead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--rule-strong); padding-bottom: 1rem; }
+.kicker { color: var(--accent); font-family: var(--font-code); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.title { margin-top: 0.35rem; color: var(--ink); font-size: clamp(1.45rem, 3vw, 2rem); font-weight: 650; letter-spacing: -0.025em; }
+.description { max-width: 52rem; margin-top: 0.45rem; color: var(--ink-2); font-size: 0.88rem; line-height: 1.55; }
+.meta { color: var(--ink-2); font-family: var(--font-code); font-size: 0.7rem; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--rule); padding: 0.9rem 0; }
+.queueCount { color: var(--ink); font-family: var(--font-code); font-size: 0.76rem; }
+.keyHint { border: 1px solid var(--rule-strong); padding: 0.2rem 0.45rem; color: var(--ink-2); font-family: var(--font-code); font-size: 0.65rem; }
+
+.tableWrap { overflow-x: auto; border-bottom: 1px solid var(--rule-strong); }
+.table { width: 100%; min-width: 880px; border-collapse: collapse; text-align: left; }
+.table thead { border-bottom: 1px solid var(--rule-strong); color: var(--ink-2); font-family: var(--font-code); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.table th { padding: 0.8rem 0.7rem; font-weight: 500; }
+.table td { border-bottom: 1px solid var(--rule); padding: 0.9rem 0.7rem; color: var(--ink-2); font-size: 0.875rem; vertical-align: top; }
+.table tbody tr:hover { background: #151d24; }
+.table strong { color: var(--ink); font-weight: 600; }
+.mono { font-family: var(--font-code); font-size: 0.72rem; }
+.link { color: var(--accent); font-weight: 600; text-decoration: underline; }
+
+.section { margin-top: 2rem; border-top: 1px solid var(--rule-strong); padding-top: 1.25rem; }
+.sectionTitle { color: var(--ink); font-size: 1rem; font-weight: 650; }
+.sectionNote { margin-top: 0.25rem; color: var(--ink-2); font-size: 0.875rem; }
+.definition { margin-top: 1rem; border-block: 1px solid var(--rule); }
+.definitionRow { display: grid; gap: 0.3rem; border-bottom: 1px solid var(--rule); padding: 0.8rem 0; }
+.definitionRow:last-child { border-bottom: 0; }
+.definitionRow dt { color: var(--ink-2); font-family: var(--font-code); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.definitionRow dd { color: var(--ink); font-size: 0.85rem; overflow-wrap: anywhere; }
+.unavailable { margin-top: 1rem; border: 1px dashed var(--rule-strong); padding: 1rem; color: var(--ink-2); font-size: 0.875rem; }
+.unavailable strong { display: block; margin-bottom: 0.3rem; color: var(--review); font-family: var(--font-code); font-size: 0.72rem; text-transform: uppercase; }
+.decisionBar { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 1rem; }
+
+.formGrid { display: grid; gap: 1rem; margin-top: 1rem; }
+.formRow { display: grid; gap: 1rem; border-bottom: 1px solid var(--rule); padding: 1rem 0; }
+.ruleRow { border-block: 1px solid var(--rule); padding: 1rem 0; }
+.ruleHeader { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.8rem; color: var(--ink-2); font-family: var(--font-code); font-size: 0.7rem; }
+.console input, .console select, .console textarea { border-color: var(--rule-strong) !important; border-radius: 2px !important; background: var(--sheet) !important; color: var(--ink) !important; box-shadow: none !important; }
+.console input:focus, .console select:focus, .console textarea:focus { border-color: var(--accent) !important; outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent) !important; outline-offset: 1px; }
+.console label span { color: var(--ink-2); }
+.console [role="dialog"] h2 { font-family: var(--font-ui) !important; font-weight: 650; }
+.console [role="dialog"] > div { color: var(--ink-2); }
+.success { border-left: 2px solid var(--pass); background: var(--success-soft); padding: 0.75rem 1rem; color: var(--ink); font-size: 0.82rem; }
+.empty { border-block: 1px dashed var(--rule-strong); padding: 2rem 0; color: var(--ink-2); font-size: 0.85rem; }
+
+@media (min-width: 760px) {
+  .content { padding: 2rem; }
+  .definitionRow { grid-template-columns: 13rem 1fr; gap: 1.5rem; }
+  .formGrid, .formRow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1040px) {
+  .shell { grid-template-columns: 13.5rem minmax(0, 1fr); }
+  .rail { position: sticky; top: 3.75rem; height: calc(100vh - 3.75rem); border-right: 1px solid var(--rule-strong); border-bottom: 0; padding: 1.5rem 1rem; }
+  .railNav { display: grid; margin-top: 1.5rem; overflow: visible; }
+  .railNote { display: block; position: absolute; right: 1rem; bottom: 1.5rem; left: 1rem; border-top: 1px solid var(--rule); padding-top: 1rem; color: var(--ink-2); font-family: var(--font-code); font-size: 0.65rem; line-height: 1.6; }
+  .content { padding: 2.25rem 2.5rem 4rem; }
+}

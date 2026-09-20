@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-09-19T20:56:35.239Z",
+  "startedAt": "2026-09-20T10:06:47.715Z",
   "baseUrl": "http://localhost:3000",
   "syntheticIdentity": "Aarav Mehta",
   "scheme": "pm-usp-csss",
@@ -7,47 +7,47 @@
     {
       "route": "dashboard",
       "url": "http://localhost:3000/dashboard",
-      "at": "2026-09-19T20:56:40.043Z"
+      "at": "2026-09-20T10:06:56.994Z"
     },
     {
       "route": "schemes",
       "url": "http://localhost:3000/schemes",
-      "at": "2026-09-19T20:56:40.392Z"
+      "at": "2026-09-20T10:06:57.462Z"
     },
     {
       "route": "draft",
-      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/documents",
-      "at": "2026-09-19T20:56:40.966Z"
+      "url": "http://localhost:3000/applications/app_d3209ef87b5b4ceb9f6c7b43e6e76774/edit",
+      "at": "2026-09-20T10:07:00.155Z"
     },
     {
       "route": "documents",
-      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/edit",
-      "at": "2026-09-19T20:56:43.740Z"
+      "url": "http://localhost:3000/applications/app_d3209ef87b5b4ceb9f6c7b43e6e76774/documents",
+      "at": "2026-09-20T10:07:10.297Z"
     },
     {
       "route": "check",
-      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/check",
-      "at": "2026-09-19T20:57:00.602Z"
+      "url": "http://localhost:3000/applications/app_d3209ef87b5b4ceb9f6c7b43e6e76774/check",
+      "at": "2026-09-20T10:07:38.147Z"
     },
     {
       "route": "review",
-      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/review",
-      "at": "2026-09-19T20:57:00.914Z"
+      "url": "http://localhost:3000/applications/app_d3209ef87b5b4ceb9f6c7b43e6e76774/review",
+      "at": "2026-09-20T10:07:38.795Z"
     },
     {
       "route": "tracking",
-      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/tracking",
-      "at": "2026-09-19T20:57:02.093Z"
+      "url": "http://localhost:3000/applications/app_d3209ef87b5b4ceb9f6c7b43e6e76774/tracking#history",
+      "at": "2026-09-20T10:07:43.365Z"
     },
     {
       "route": "diagnose",
-      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/diagnose",
-      "at": "2026-09-19T20:57:04.186Z"
+      "url": "http://localhost:3000/applications/app_d3209ef87b5b4ceb9f6c7b43e6e76774/diagnose",
+      "at": "2026-09-20T10:07:51.160Z"
     },
     {
       "route": "repair-draft",
-      "url": "http://localhost:3000/applications/app_26d200a3770140e5b394728523c2def7/edit",
-      "at": "2026-09-19T20:57:09.654Z"
+      "url": "http://localhost:3000/applications/app_d3209ef87b5b4ceb9f6c7b43e6e76774/edit",
+      "at": "2026-09-20T10:08:07.527Z"
     }
   ],
   "documents": [
@@ -57,7 +57,7 @@
     },
     {
       "label": "Family income certificate",
-      "filename": "sevafix_mock_income_certificate.pdf"
+      "filename": "sevafix_mock_income_certificate_FAULTY.pdf"
     },
     {
       "label": "Admission/course/institution evidence",
@@ -73,11 +73,13 @@
     "artifacts/mock-run/02-scheme-catalog.png",
     "artifacts/mock-run/03-completed-draft.png",
     "artifacts/mock-run/04-documents-processed.png",
-    "artifacts/mock-run/05-validation-results.png",
+    "artifacts/mock-run/05-fault-detected.png",
     "artifacts/mock-run/06-frozen-version.png",
     "artifacts/mock-run/07-tracking-timeline.png",
     "artifacts/mock-run/08-diagnosis.png",
-    "artifacts/mock-run/09-repair-draft.png"
+    "artifacts/mock-run/09-repair-draft.png",
+    "artifacts/mock-run/10-corrected-document.png",
+    "artifacts/mock-run/11-correction-passed.png"
   ],
   "catalog": {
     "count": 10,
@@ -94,18 +96,19 @@
       "Pradhan Mantri Ujjwala Yojana"
     ]
   },
-  "applicationId": "app_26d200a3770140e5b394728523c2def7",
+  "applicationId": "app_d3209ef87b5b4ceb9f6c7b43e6e76774",
   "documentPipeline": "PASS",
-  "documentPageText": "SevaFix\nDashboard\nNew application\nGrievance\nSettings\nSign out\npm-usp-csss\nReady (SevaFix checks)\nDraft\nDocuments\nCheck\nReview & freeze\nTracking\nDiagnose\nUpload evidence\nClass XII marksheet\nUpload\nFamily income certificate\nUpload\nAdmission/course/institution evidence\nUpload\nIdentity evidence for consistency check\nUpload\nYour documents\n\nIDENTITY_PROOF\n\n73 KB · application/pdf\n\nConfirmed\nView\nDelete\n\nINCOME_CERTIFICATE\n\n73 KB · application/pdf\n\nConfirmed\nView\nDelete\n\nMARKSHEET\n\n74 KB · application/pdf\n\nConfirmed\nView\nDelete\n\nADMISSION_LETTER\n\n73 KB · application/pdf\n\nConfirmed\nView\nDelete",
-  "validation": "13 passed · 0 failed · 0 need review · 0 blocked",
+  "documentPageText": "Seva\nFix\nApplications\nSchemes\nDiagnose\nSettings\nJump to\nCtrl K\nSign out\n← All applications\n\nAPPLICATION CASE FILE\n\nPM-USP Central Sector Scheme of Scholarship for College and University Students\n◐\nAction required\nPOLICY VERSION\npm-usp-csss-2026-27.3\nLAST SAVED\n20/9/2026, 3:37:26 pm\nFROZEN VERSION\nNot yet frozen\n✓\nForm\nApplication answers\n◐\nDocuments\nEvidence and extracted values\n×\nChecks\nRules and consistency\n—\nReview\nSummary and freeze\n—\nSubmission\nOfficial portal record\n✓\nTracking\nDated status history\n—\nDiagnose\nEvidence and repair\n\nEVIDENCE\n\nDocuments\n\nAdd the evidence required for this application. SevaFix reads documents to help compare them with your answers; you remain responsible for confirming extracted information.\n\nRequired evidence\n\nClass XII marksheet\n\nA document of this type is already in the application.\n\nAdd another\n\nFamily income certificate\n\nA document of this type is already in the application.\n\nAdd another\n\nCategory/caste certificate (if applicable)\n\nPDF or clear scan · maximum 10 MiB\n\nChoose file\n\nDisability certificate (if applicable)\n\nPDF or clear scan · maximum 10 MiB\n\nChoose file\n\nAdmission/course/institution evidence\n\nA document of this type is already in the application.\n\nAdd another\n\nIdentity evidence for consistency check\n\nA document of this type is already in the application.\n\nAdd another\n\nDOCUMENT REGISTER\n\nUploaded documents\n\n4 documents\n\nDOCUMENT\tEVIDENCE STATE\tEXTRACTED INFORMATION\tLAST UPDATED\tACTION\n\n\nAdmission letter\n\n3 KB · application/pdf\n\n\t\n✓\nConfirmed\n\t\n\nPrimaryname: Aarav Mehta\n\nAcademicyear: 2025-2026\n\n\t20/09/2026\t\nView\nDelete\n\n\n\nMarksheet\n\n2 KB · application/pdf\n\n\t\n✓\nConfirmed\n\t\n\nDateofbirth: 18 April 2007\n\nAcademicyear: 2024-2025\n\n\t20/09/2026\t\nView\nDelete\n\n\n\nIncome certificate\n\n2 KB · application/pdf\n\n\t\n✓\nConfirmed\n\t\n\nPrimaryname: Aarav Mehta\n\nAnnualincomeinr: 900000\n\n\t20/09/2026\t\nView\nDelete\n\n\n\nIdentity proof\n\n2 KB · application/pdf\n\n\t\n✓\nConfirmed\n\t\n\nDateofbirth: 18 April 2007\n\nInstitutionname: SEVAFIX DEMONSTRATION IDENTITY REGISTRY\n\n\t20/09/2026\t\nView\nDelete\n\nVIEW LINKS EXPIRE AFTER THREE MINUTES AND ARE NOT STORED IN THE BROWSER.",
+  "faultyValidation": "12 passed · 1 failed · 0 need review · 0 blocked",
   "frozenVersion": 1,
   "tracking": {
-    "officialApplicationId": "NSP-MOCK-1789851422093",
+    "officialApplicationId": "NSP-MOCK-1789898863365",
     "noteRecorded": true,
     "externalSubmissionMade": false
   },
-  "diagnosis": "Latest diagnosis\n\nMISSING DOCUMENT\n\nThe income certificate provided could not be verified against the policy requirements for fresh applicants.\n\nProvide a new, valid income certificate issued by a recognized authority and signed by the issuing officer.\nEnsure the income declared in the application matches the figures stated in the certificate.\nResubmit the application through the NSP portal once the verified certificate is attached.\n\nAI-assisted with openai.gpt-oss-20b; verified citations only.\n\nSources: C1, C2\nStart corrected application",
+  "diagnosis": "LIKELY ISSUE\n\nIncome mismatch\n\nThe application form declares annual family income of INR 350000, while the uploaded income certificate states INR 900000. The values do not match. This is an inferred application issue, not an official rejection reason.\n\nEVIDENCE STATUS\n\nSupported by an application check and available uploaded evidence.",
   "repairDraftCreated": true,
+  "correctedValidation": "13 passed · 0 failed · 0 need review · 0 blocked",
   "status": "PASS",
-  "completedAt": "2026-09-19T20:57:09.789Z"
+  "completedAt": "2026-09-20T10:08:24.754Z"
 }

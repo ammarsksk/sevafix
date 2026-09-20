@@ -1,402 +1,115 @@
-"""Create synthetic, visibly invalid documents for the SevaFix PM-USP demo flow.
-
-These documents are test fixtures only. They contain no real identity numbers and
-must never be presented to a government authority.
-"""
+"""Generate dependency-free, visibly fictional PDF fixtures for the SevaFix demo."""
 
 from __future__ import annotations
 
 from pathlib import Path
-
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import mm
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase import pdfmetrics
-from reportlab.platypus import (
-    HRFlowable,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
 
 
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = ROOT / "output" / "pdf"
 WARNING = "FICTIONAL TEST DOCUMENT - NOT VALID FOR OFFICIAL USE"
 STUDENT = "Aarav Mehta"
-DOB = "18 April 2007"
-INSTITUTION = "National Institute of Test Studies"
-AISHE_CODE = "C-99999 (SYNTHETIC)"
 
 
-def register_fonts() -> tuple[str, str]:
-    regular = Path("C:/Windows/Fonts/arial.ttf")
-    bold = Path("C:/Windows/Fonts/arialbd.ttf")
-    if regular.exists() and bold.exists():
-        pdfmetrics.registerFont(TTFont("MockSans", str(regular)))
-        pdfmetrics.registerFont(TTFont("MockSans-Bold", str(bold)))
-        return "MockSans", "MockSans-Bold"
-    return "Helvetica", "Helvetica-Bold"
+def _escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
-FONT, FONT_BOLD = register_fonts()
-
-
-def styles():
-    base = getSampleStyleSheet()
-    return {
-        "warning": ParagraphStyle(
-            "Warning",
-            parent=base["Normal"],
-            fontName=FONT_BOLD,
-            fontSize=10,
-            leading=13,
-            alignment=TA_CENTER,
-            textColor=colors.HexColor("#991B1B"),
-        ),
-        "issuer": ParagraphStyle(
-            "Issuer",
-            parent=base["Normal"],
-            fontName=FONT_BOLD,
-            fontSize=15,
-            leading=18,
-            alignment=TA_CENTER,
-            textColor=colors.HexColor("#0F172A"),
-        ),
-        "subtitle": ParagraphStyle(
-            "Subtitle",
-            parent=base["Normal"],
-            fontName=FONT,
-            fontSize=9,
-            leading=12,
-            alignment=TA_CENTER,
-            textColor=colors.HexColor("#475569"),
-        ),
-        "title": ParagraphStyle(
-            "Title",
-            parent=base["Normal"],
-            fontName=FONT_BOLD,
-            fontSize=20,
-            leading=24,
-            alignment=TA_CENTER,
-            spaceAfter=4 * mm,
-            textColor=colors.HexColor("#0F3D5E"),
-        ),
-        "body": ParagraphStyle(
-            "Body",
-            parent=base["Normal"],
-            fontName=FONT,
-            fontSize=10,
-            leading=15,
-            alignment=TA_LEFT,
-            textColor=colors.HexColor("#1E293B"),
-        ),
-        "small": ParagraphStyle(
-            "Small",
-            parent=base["Normal"],
-            fontName=FONT,
-            fontSize=8,
-            leading=11,
-            textColor=colors.HexColor("#64748B"),
-        ),
-        "right": ParagraphStyle(
-            "Right",
-            parent=base["Normal"],
-            fontName=FONT,
-            fontSize=9,
-            leading=12,
-            alignment=TA_RIGHT,
-            textColor=colors.HexColor("#334155"),
-        ),
-    }
-
-
-STYLES = styles()
-
-
-def footer(canvas, doc):
-    canvas.saveState()
-    canvas.setStrokeColor(colors.HexColor("#CBD5E1"))
-    canvas.line(20 * mm, 15 * mm, 190 * mm, 15 * mm)
-    canvas.setFont(FONT_BOLD, 8)
-    canvas.setFillColor(colors.HexColor("#991B1B"))
-    canvas.drawString(20 * mm, 10 * mm, WARNING)
-    canvas.setFont(FONT, 8)
-    canvas.setFillColor(colors.HexColor("#64748B"))
-    canvas.drawRightString(190 * mm, 10 * mm, f"SevaFix mock run | Page {doc.page}")
-    canvas.restoreState()
-
-
-def header(issuer: str, subtitle: str, title: str):
-    return [
-        Table(
-            [[Paragraph(WARNING, STYLES["warning"]) ]],
-            colWidths=[170 * mm],
-            style=TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FEE2E2")),
-                    ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#EF4444")),
-                    ("TOPPADDING", (0, 0), (-1, -1), 7),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-                ]
-            ),
-        ),
-        Spacer(1, 7 * mm),
-        Paragraph(issuer, STYLES["issuer"]),
-        Paragraph(subtitle, STYLES["subtitle"]),
-        Spacer(1, 3 * mm),
-        HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#0F3D5E")),
-        Spacer(1, 6 * mm),
-        Paragraph(title, STYLES["title"]),
-    ]
-
-
-def key_value_table(rows, widths=(55 * mm, 115 * mm)):
-    formatted = [[Paragraph(str(k), STYLES["small"]), Paragraph(str(v), STYLES["body"])] for k, v in rows]
-    return Table(
-        formatted,
-        colWidths=list(widths),
-        hAlign="LEFT",
-        style=TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F1F5F9")),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-            ]
-        ),
-    )
-
-
-def build(filename: str, story):
+def _pdf(filename: str, issuer: str, title: str, rows: list[tuple[str, str]], notes: list[str], *, fault: str | None = None) -> Path:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    doc = SimpleDocTemplate(
-        str(OUTPUT_DIR / filename),
-        pagesize=A4,
-        leftMargin=20 * mm,
-        rightMargin=20 * mm,
-        topMargin=18 * mm,
-        bottomMargin=23 * mm,
-        title=filename.removesuffix(".pdf").replace("_", " ").title(),
-        author="SevaFix synthetic test fixture generator",
-        subject=WARNING,
-    )
-    doc.build(story, onFirstPage=footer, onLaterPages=footer)
-
-
-def marksheet():
-    story = header(
-        "DEMONSTRATION BOARD OF SCHOOL EDUCATION",
-        "Synthetic assessment record for software testing",
-        "Class XII Statement of Marks",
-    )
-    story += [
-        key_value_table(
-            [
-                ("Candidate", STUDENT),
-                ("Date of birth", DOB),
-                ("Test roll number", "MOCK-2025-12047"),
-                ("Academic session", "2024-2025"),
-                ("School", "SevaFix Demonstration Senior Secondary School"),
-            ]
-        ),
-        Spacer(1, 7 * mm),
+    commands = [
+        "q", "0.98 0.90 0.90 rg", "36 738 540 34 re f", "Q",
+        "BT", "/F2 11 Tf", "0.65 0.05 0.05 rg", "54 751 Td", f"({_escape(WARNING)}) Tj", "ET",
+        "BT", "/F2 14 Tf", "0.08 0.18 0.27 rg", "54 708 Td", f"({_escape(issuer)}) Tj", "ET",
+        "BT", "/F2 20 Tf", "0.05 0.30 0.42 rg", "54 674 Td", f"({_escape(title)}) Tj", "ET",
+        "0.10 0.35 0.45 RG", "1.3 w", "54 658 m 558 658 l S",
     ]
-    rows = [
-        ["Subject", "Theory", "Practical", "Total", "Result"],
-        ["English Core", "88", "--", "88", "PASS"],
-        ["Physics", "67", "28", "95", "PASS"],
-        ["Chemistry", "65", "29", "94", "PASS"],
-        ["Mathematics", "93", "--", "93", "PASS"],
-        ["Computer Science", "66", "29", "95", "PASS"],
+    y = 626
+    for label, value in rows:
+        commands.extend([
+            "BT", "/F2 10 Tf", "0.25 0.31 0.36 rg", f"54 {y} Td", f"({_escape(label + ':')}) Tj", "ET",
+            "BT", "/F1 11 Tf", "0.08 0.12 0.17 rg", f"205 {y} Td", f"({_escape(value)}) Tj", "ET",
+            "0.82 0.85 0.88 RG", "0.5 w", f"54 {y - 7} m 558 {y - 7} l S",
+        ])
+        y -= 34
+    if fault:
+        commands.extend([
+            "q", "1.0 0.94 0.94 rg", f"54 {y - 8} 504 42 re f", "Q",
+            "BT", "/F2 9 Tf", "0.70 0.05 0.05 rg", f"66 {y + 8} Td", f"({_escape(fault)}) Tj", "ET",
+        ])
+        y -= 58
+    for note in notes:
+        commands.extend(["BT", "/F1 9 Tf", "0.32 0.38 0.43 rg", f"54 {y} Td", f"({_escape(note)}) Tj", "ET"])
+        y -= 18
+    commands.extend([
+        "0.82 0.85 0.88 RG", "0.6 w", "54 46 m 558 46 l S",
+        "BT", "/F2 8 Tf", "0.65 0.05 0.05 rg", "54 30 Td", f"({_escape(WARNING)}) Tj", "ET",
+    ])
+    stream = "\n".join(commands).encode("ascii")
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
+        b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream",
     ]
-    marks = Table(rows, colWidths=[62 * mm, 27 * mm, 27 * mm, 25 * mm, 29 * mm])
-    marks.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), FONT_BOLD),
-                ("FONTNAME", (0, 1), (-1, -1), FONT),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F3D5E")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#94A3B8")),
-                ("ALIGN", (1, 1), (-1, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-            ]
-        )
-    )
-    story += [
-        marks,
-        Spacer(1, 7 * mm),
-        key_value_table(
-            [
-                ("Aggregate", "465 / 500 (93.0%)"),
-                ("Board percentile", "92.0"),
-                ("Result", "PASS"),
-                ("Issue date", "30 May 2025"),
-            ]
-        ),
-        Spacer(1, 10 * mm),
-        Paragraph(
-            "This record was generated solely to test SevaFix document upload, OCR, name consistency, and eligibility checks. It has no academic or legal validity.",
-            STYLES["body"],
-        ),
-    ]
-    build("sevafix_mock_class_xii_marksheet.pdf", story)
+    result = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for number, obj in enumerate(objects, 1):
+        offsets.append(len(result))
+        result.extend(f"{number} 0 obj\n".encode("ascii"))
+        result.extend(obj)
+        result.extend(b"\nendobj\n")
+    xref = len(result)
+    result.extend(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+    result.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        result.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    result.extend(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode("ascii"))
+    path = OUTPUT_DIR / filename
+    path.write_bytes(result)
+    return path
 
 
-def income_certificate():
-    story = header(
-        "OFFICE OF THE DEMONSTRATION REVENUE OFFICER",
-        "Mock District, Test State - synthetic e-governance fixture",
-        "Family Income Certificate",
-    )
-    story += [
-        Paragraph(
-            "This is to certify, for software demonstration purposes only, that the gross annual family income associated with the fictional student below is recorded as follows:",
-            STYLES["body"],
+def main() -> None:
+    documents = [
+        _pdf(
+            "sevafix_mock_class_xii_marksheet.pdf", "DEMONSTRATION BOARD OF SCHOOL EDUCATION", "Class XII Statement of Marks",
+            [("Applicant Name", STUDENT), ("Date of Birth", "18 April 2007"), ("Academic Year", "2024-2025"),
+             ("Board Percentile", "92.0"), ("Aggregate", "465 / 500 - 93 percent"), ("Result", "PASS"),
+             ("Test Roll Number", "MOCK-2025-12047")],
+            ["Synthetic assessment record created only for OCR and eligibility-check testing."],
         ),
-        Spacer(1, 6 * mm),
-        key_value_table(
-            [
-                ("Student name", STUDENT),
-                ("Parent / guardian", "Rohan Mehta (fictional)"),
-                ("Address", "42 Test Avenue, Mock District, Test State 000000"),
-                ("Financial year", "2024-2025"),
-                ("Gross annual family income", "INR 3,00,000 (Rupees Three Lakh Only)"),
-                ("Certificate reference", "TEST-INC-2025-00418"),
-                ("Issue date", "15 June 2025"),
-                ("Valid through", "14 June 2026"),
-            ]
+        _pdf(
+            "sevafix_mock_income_certificate_FAULTY.pdf", "OFFICE OF THE DEMONSTRATION REVENUE OFFICER", "Family Income Certificate - Faulty Demo Version",
+            [("Applicant Name", STUDENT), ("Parent or Guardian", "Rohan Mehta - fictional"), ("Financial Year", "2024-2025"),
+             ("Annual Family Income", "INR 900000"), ("Certificate Reference", "TEST-INC-2025-ERROR"), ("Issue Date", "15 June 2025")],
+            ["No government database was queried. All names, offices and identifiers are fictional."],
+            fault="DELIBERATE DEMO FAULT: form income is INR 350000; this certificate says INR 900000.",
         ),
-        Spacer(1, 10 * mm),
-        Table(
-            [[Paragraph("Digitally unsigned synthetic fixture", STYLES["small"]), Paragraph("Demonstration Revenue Officer", STYLES["right"]) ]],
-            colWidths=[85 * mm, 85 * mm],
+        _pdf(
+            "sevafix_mock_income_certificate_CORRECTED.pdf", "OFFICE OF THE DEMONSTRATION REVENUE OFFICER", "Family Income Certificate - Corrected Demo Version",
+            [("Applicant Name", STUDENT), ("Parent or Guardian", "Rohan Mehta - fictional"), ("Financial Year", "2024-2025"),
+             ("Annual Family Income", "INR 350000"), ("Certificate Reference", "TEST-INC-2025-CORRECTED"), ("Issue Date", "16 June 2025")],
+            ["Corrected synthetic fixture. No government database was queried."],
         ),
-        Spacer(1, 12 * mm),
-        Paragraph(
-            "No government database was queried to create this file. All people, identifiers, addresses, seals, and offices shown here are fictional.",
-            STYLES["body"],
+        _pdf(
+            "sevafix_mock_admission_letter.pdf", "NATIONAL INSTITUTE OF TEST STUDIES", "Provisional Admission Letter",
+            [("Applicant Name", STUDENT), ("Institution Name", "National Institute of Test Studies"),
+             ("Course Name", "Bachelor of Science - Computer Science"), ("Course Type", "Degree"), ("Enrolment Mode", "Regular"),
+             ("Current Course Year", "1"), ("AISHE Code", "C-99999 - synthetic"), ("Academic Year", "2025-2026")],
+            ["The institution and AISHE code are deliberately fictional. This is not an admission offer."],
+        ),
+        _pdf(
+            "sevafix_mock_identity_proof.pdf", "SEVAFIX DEMONSTRATION IDENTITY REGISTRY", "Synthetic Student Identity Certificate",
+            [("Applicant Name", STUDENT), ("Date of Birth", "18 April 2007"), ("Test Identifier", "SF-DEMO-ID-000184"),
+             ("Purpose", "OCR and name consistency testing")],
+            ["NOT AADHAAR. NOT PAN. NOT A GOVERNMENT ID. Contains no real identity number."],
         ),
     ]
-    build("sevafix_mock_income_certificate.pdf", story)
-
-
-def admission_letter():
-    story = header(
-        INSTITUTION.upper(),
-        "Synthetic institution created for the SevaFix demonstration",
-        "Provisional Admission Letter",
-    )
-    story += [
-        Paragraph("Dear Aarav Mehta,", STYLES["body"]),
-        Spacer(1, 3 * mm),
-        Paragraph(
-            "For this fictional software test, you are shown as provisionally admitted to the first year of a regular undergraduate degree programme for the 2025-2026 academic session.",
-            STYLES["body"],
-        ),
-        Spacer(1, 7 * mm),
-        key_value_table(
-            [
-                ("Applicant", STUDENT),
-                ("Programme", "Bachelor of Science (Computer Science)"),
-                ("Course type", "Degree"),
-                ("Enrolment mode", "Regular"),
-                ("Current course year", "1"),
-                ("Institution", INSTITUTION),
-                ("AISHE code", AISHE_CODE),
-                ("Recognition status", "Recognized - synthetic test assertion"),
-                ("AISHE status", "Active - synthetic test assertion"),
-                ("Test admission number", "NITS-MOCK-25-0184"),
-                ("Letter date", "20 July 2025"),
-            ]
-        ),
-        Spacer(1, 10 * mm),
-        Paragraph(
-            "This letter does not offer admission to any real institution. The institution name and AISHE code are deliberately synthetic and must not be used outside this mock run.",
-            STYLES["body"],
-        ),
-    ]
-    build("sevafix_mock_admission_letter.pdf", story)
-
-
-def identity_proof():
-    story = header(
-        "SEVAFIX DEMONSTRATION IDENTITY REGISTRY",
-        "Non-government identity-consistency fixture",
-        "Synthetic Student Identity Certificate",
-    )
-    story += [
-        Table(
-            [
-                [
-                    Table(
-                        [[Paragraph("TEST<br/>PHOTO<br/>AREA", STYLES["warning"]) ]],
-                        colWidths=[36 * mm],
-                        rowHeights=[46 * mm],
-                        style=TableStyle(
-                            [
-                                ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#94A3B8")),
-                                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
-                                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                            ]
-                        ),
-                    ),
-                    key_value_table(
-                        [
-                            ("Name", STUDENT),
-                            ("Date of birth", DOB),
-                            ("Test identifier", "SF-DEMO-ID-000184"),
-                            ("Purpose", "OCR and name consistency testing"),
-                        ],
-                        widths=(40 * mm, 90 * mm),
-                    ),
-                ]
-            ],
-            colWidths=[40 * mm, 130 * mm],
-            style=TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]),
-        ),
-        Spacer(1, 10 * mm),
-        Table(
-            [[Paragraph("NOT AADHAAR", STYLES["warning"]), Paragraph("NOT PAN", STYLES["warning"]), Paragraph("NOT GOVERNMENT ID", STYLES["warning"]) ]],
-            colWidths=[56.7 * mm, 56.7 * mm, 56.6 * mm],
-            style=TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFF7ED")),
-                    ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#F97316")),
-                    ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#FDBA74")),
-                    ("TOPPADDING", (0, 0), (-1, -1), 8),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                ]
-            ),
-        ),
-        Spacer(1, 9 * mm),
-        Paragraph(
-            "This certificate intentionally contains no Aadhaar number, PAN, bank account, QR code, biometric, signature, or real government identifier. It exists only to test whether the same fictional name appears across documents.",
-            STYLES["body"],
-        ),
-    ]
-    build("sevafix_mock_identity_proof.pdf", story)
-
-
-def main():
-    marksheet()
-    income_certificate()
-    admission_letter()
-    identity_proof()
-    for path in sorted(OUTPUT_DIR.glob("sevafix_mock_*.pdf")):
-        print(path)
+    for document in documents:
+        print(document)
 
 
 if __name__ == "__main__":

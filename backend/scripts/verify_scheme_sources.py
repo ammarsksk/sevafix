@@ -51,9 +51,10 @@ def main() -> None:
 
     scheme_ids = {item["schemeId"] for item in schemes}
     assert scheme_ids == EXPECTED_SCHEME_IDS, f"Unexpected scheme IDs: {sorted(scheme_ids)}"
-    pm_usp = next(item for item in schemes if item["schemeId"] == "pm-usp-csss")
-    assert pm_usp.get("applicationReady") is True
-    assert all(item.get("applicationReady") is False for item in schemes if item["schemeId"] != "pm-usp-csss")
+    not_ready = [item["schemeId"] for item in schemes if item.get("applicationReady") is not True]
+    assert not not_ready, f"Schemes without an application workflow: {sorted(not_ready)}"
+    missing_versions = [item["schemeId"] for item in schemes if not item.get("activePolicyVersionId")]
+    assert not missing_versions, f"Schemes without an active policy version: {sorted(missing_versions)}"
 
     data_gov_sources = [item for item in sources if item.get("sourceKind") == "DATA_GOV_API"]
     data_gov_source_ids = {item["sourceId"] for item in data_gov_sources}
@@ -68,6 +69,7 @@ def main() -> None:
 
     print(f"Stack status: {stack['StackStatus']}")
     print(f"Schemes verified: {len(schemes)}")
+    print("Application-ready schemes: all")
     print(f"Data.gov.in sources verified: {len(EXPECTED_DATA_GOV_SOURCES)}")
     print("Stored API URLs contain keys: no")
     print("Source-monitor API key configured: yes")

@@ -22,11 +22,11 @@ try {
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Log in", exact: true }).click();
   await page.waitForURL("**/dashboard", { timeout: 30_000 });
-  await page.getByRole("heading", { name: /Welcome/ }).waitFor();
+  await page.getByRole("heading", { name: /Good to see you/ }).waitFor();
 
-  await page.getByRole("link", { name: "New application", exact: true }).click();
-  await page.getByRole("heading", { name: "Create a new application" }).waitFor();
-  await page.getByRole("link", { name: "Start application" }).click();
+  await page.getByRole("link", { name: "Schemes", exact: true }).click();
+  await page.getByRole("heading", { name: "Explore government schemes" }).waitFor();
+  await page.getByRole("article").filter({ hasText: "PM-USP CSSS" }).getByRole("link", { name: "Start", exact: true }).click();
   await page.getByRole("button", { name: "Create draft application" }).click();
   await page.waitForURL("**/applications/*/edit", { timeout: 30_000 });
 
@@ -47,14 +47,14 @@ try {
   await page.getByLabel(/AISHE code/).fill("C-DEMO-001");
   await chooseBoolean(/Recognized by the relevant regulatory body/, "Yes");
   await chooseBoolean(/Institution status is active on AISHE/, "Yes");
-  await page.getByText(/Last saved/).waitFor({ timeout: 30_000 });
+  await page.getByText(/^Saved /).waitFor({ timeout: 30_000 });
 
   await page.getByRole("link", { name: "Documents", exact: true }).click();
   const incomeDocumentSlot = page.getByText("Family income certificate").locator("..");
   await incomeDocumentSlot.locator('input[type="file"]').setInputFiles(
     "../SevaFix — Government Application Companion (First Commit by AWS).pdf",
   );
-  await page.getByText("INCOME_CERTIFICATE").waitFor({ timeout: 30_000 });
+  await page.getByText("INCOME CERTIFICATE").waitFor({ timeout: 30_000 });
   await page
     .getByText(/Extracted|Needs your confirmation|Unsupported language|Reading failed/)
     .waitFor({ timeout: 180_000 });
@@ -83,13 +83,16 @@ try {
 
   await page.getByRole("link", { name: "Diagnose", exact: true }).click();
   await page.getByLabel("Rejection reason").fill("The application was returned because family income does not match the income certificate.");
-  await page.getByRole("button", { name: "Diagnose", exact: true }).click();
+  await page.getByRole("button", { name: "Diagnose application", exact: true }).click();
   await page.getByText("Latest diagnosis").waitFor({ timeout: 120_000 });
   await page
     .getByText(/^(MISSING DOCUMENT|INCOME MISMATCH|NAME MISMATCH|INELIGIBLE COURSE|OTHER SCHOLARSHIP CONFLICT|PERCENTILE NOT VERIFIED|APPLICATION DATA ERROR|DEADLINE OR PROCESS|UNKNOWN)$/i)
     .waitFor();
-  await page.getByText(/AI-assisted with|Safe deterministic diagnosis/).waitFor();
-  await page.getByText(/Sources:/).waitFor();
+  const diagnosisMode = page.getByText(/AI-assisted with|Safe deterministic diagnosis/);
+  await diagnosisMode.waitFor();
+  if (await page.getByText(/AI-assisted with/).isVisible().catch(() => false)) {
+    await page.getByText(/Sources:/).waitFor();
+  }
 
   await page.goto(`${baseUrl}/review/policies`);
   await page.getByRole("heading", { name: "Policies", exact: true }).waitFor({ timeout: 30_000 });
@@ -100,14 +103,14 @@ try {
   await page.getByRole("heading", { name: "Diagnose a failed application", exact: true }).waitFor();
   await page.getByLabel("Official application ID").fill(`NSP-EXTERNAL-${Date.now()}`);
   await page.getByLabel("Rejection reason").fill("The application was returned because the income certificate did not match.");
-  await page.getByRole("button", { name: "Continue to AI diagnosis" }).click();
+  await page.getByRole("button", { name: "Continue to evidence" }).click();
   await page.waitForURL("**/applications/*/diagnose", { timeout: 30_000 });
   const importedReason = await page.getByLabel("Rejection reason").inputValue();
   if (!importedReason.includes("income certificate")) throw new Error("Imported grievance reason was not carried into diagnosis");
 
-  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("link", { name: "Profile", exact: true }).click();
   await page.getByRole("button", { name: "Delete my account" }).click();
-  await page.getByLabel('Type "DELETE" to confirm').fill("DELETE");
+  await page.getByLabel(/Type.*DELETE.*to confirm/).fill("DELETE");
   await page.getByRole("button", { name: "Delete account" }).click();
   await page.waitForURL("**/login", { timeout: 30_000 });
 

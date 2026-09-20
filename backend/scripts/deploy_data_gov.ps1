@@ -77,7 +77,15 @@ try {
         throw "Scheme and source seeding failed."
     }
 
-    Write-Host "Deployment and scheme/source seeding completed successfully." -ForegroundColor Green
+    & $python "backend\scripts\activate_scheme_policies.py" `
+        --stack $Stack `
+        --profile $Profile `
+        --region $Region
+    if ($LASTEXITCODE -ne 0) {
+        throw "Scheme policy activation failed."
+    }
+
+    Write-Host "Deployment, scheme seeding, and policy activation completed successfully." -ForegroundColor Green
 }
 finally {
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($keyPointer)

@@ -8,7 +8,6 @@ export interface ApiErrorBody {
     details?: { retryable?: boolean; [key: string]: unknown };
   };
 }
-
 export interface Scheme {
   schemeId: string;
   name: string;
@@ -19,7 +18,43 @@ export interface Scheme {
   activePolicyVersionId?: string;
   officialPortalUrl?: string;
   disclaimer?: string;
+  authority?: string;
+  supportedApplicationTypes?: string[];
+  formSchema?: {
+    version?: string;
+    sections: SchemeFormSection[];
+  };
+  documentChecklist?: Record<string, SchemeDocumentRequirement[]>;
   updatedAt?: IsoDateTime;
+}
+
+export type SchemeFieldType = "text" | "integer" | "number" | "select" | "boolean";
+
+export interface SchemeFormField {
+  key: string;
+  label: string;
+  type: SchemeFieldType;
+  helpText?: string;
+  options?: Array<string | { value: string; label: string }>;
+  required?: boolean;
+  requiredFor?: string[];
+  minimum?: number;
+  maximum?: number;
+  visibleWhen?: { field: string; equals: string | number | boolean };
+}
+
+export interface SchemeFormSection {
+  id: string;
+  title: string;
+  fields: SchemeFormField[];
+}
+
+export interface SchemeDocumentRequirement {
+  documentType: string;
+  label: string;
+  required?: boolean;
+  requiredBySevaFix?: boolean;
+  requiredWhen?: string;
 }
 
 export interface UserProfile {
@@ -279,3 +314,4 @@ export interface SourceChange {
   reviewedBy?: string;
   reviewReason?: string;
 }
+

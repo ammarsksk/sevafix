@@ -186,6 +186,9 @@ def main() -> None:
         table.delete_item(Key={"PK": "CATALOG#SCHEMES", "SK": f"SCHEME#{scheme_id}"})
 
     for scheme in CATALOG:
+        existing = table.get_item(
+            Key={"PK": f"SCHEME#{scheme['schemeId']}", "SK": "META"}, ConsistentRead=True
+        ).get("Item")
         item = {
             "PK": f"SCHEME#{scheme['schemeId']}",
             "SK": "META",
@@ -197,6 +200,15 @@ def main() -> None:
             "disclaimer": "SevaFix is preparing a reviewed policy package for this scheme. Check the official portal for current eligibility and application instructions.",
             "updatedAt": now,
         }
+        # Catalog refreshes must never undo an already published application
+        # package. The activation loader owns these versioned workflow fields.
+        if existing and existing.get("applicationReady") is True and existing.get("activePolicyVersionId"):
+            for key in (
+                "applicationReady", "catalogStatus", "disclaimer", "supportedApplicationTypes",
+                "formSchema", "documentChecklist", "activePolicyVersionId", "policyPackageHash",
+            ):
+                if key in existing:
+                    item[key] = existing[key]
         catalog_item = {**item, "PK": "CATALOG#SCHEMES", "SK": f"SCHEME#{scheme['schemeId']}"}
         table.put_item(Item=item)
         table.put_item(Item=catalog_item)
@@ -228,7 +240,7 @@ def main() -> None:
         UpdateExpression="SET applicationReady=:ready, catalogStatus=:status, updatedAt=:now",
         ExpressionAttributeValues={":ready": True, ":status": "READY", ":now": now},
     )
-    print(f"Seeded {len(CATALOG) + 1} government scheme catalog entries; PM-USP remains application-ready.")
+    print(f"Seeded {len(CATALOG) + 1} government scheme catalog entries without downgrading published workflows.")
 
 
 if __name__ == "__main__":

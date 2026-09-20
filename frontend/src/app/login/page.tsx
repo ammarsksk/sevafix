@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 
-import { Button, Card, ErrorBanner, PageHeader, TextField } from "@/components/ui";
+import { AuthFrame } from "@/components/auth-frame";
+import { AppIcon } from "@/components/icons";
+import { Button, ErrorBanner, TextField } from "@/components/ui";
 import { isGoogleSignInConfigured } from "@/lib/sevafix/amplify-auth";
 import { useAuth } from "@/lib/sevafix/auth-context";
 
@@ -57,9 +59,12 @@ function LoginForm() {
   }
 
   return (
-    <div className="mx-auto max-w-sm">
-      <PageHeader title="Log in" />
-      <Card>
+    <AuthFrame
+      eyebrow="Welcome back"
+      title="Continue your application"
+      description="Sign in to return to your saved forms, documents, checks, and diagnoses."
+      footer={<div className="flex justify-between gap-4"><Link href="/forgot-password" className="font-semibold text-slate-600 hover:text-blue-700">Forgot password?</Link><Link href="/signup" className="font-bold text-blue-700 hover:text-blue-800">Create an account</Link></div>}
+    >
         <form className="space-y-4" onSubmit={onSubmit}>
           <ErrorBanner message={error} />
           <TextField
@@ -79,12 +84,12 @@ function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
           />
           <Button type="submit" className="w-full" loading={loading}>
-            Log in
+            Log in <AppIcon name="arrow-right" size={16} />
           </Button>
           {isGoogleSignInConfigured ? (
             <>
               <div className="relative py-1 text-center text-xs text-slate-500">
-                <span className="bg-white px-2">or</span>
+                <span className="relative z-10 bg-white px-2">or continue with</span>
                 <span className="absolute inset-x-0 top-1/2 -z-10 border-t border-slate-200" />
               </div>
               <Button type="button" variant="secondary" className="w-full" loading={googleLoading} onClick={onGoogleSignIn}>
@@ -93,15 +98,6 @@ function LoginForm() {
             </>
           ) : null}
         </form>
-        <div className="mt-4 flex justify-between text-sm">
-          <Link href="/forgot-password" className="text-slate-600 underline">
-            Forgot password?
-          </Link>
-          <Link href="/signup" className="text-slate-600 underline">
-            Create an account
-          </Link>
-        </div>
-      </Card>
-    </div>
+    </AuthFrame>
   );
 }

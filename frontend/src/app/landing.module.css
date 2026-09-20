@@ -1,0 +1,232 @@
+.landing {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.section {
+  border-top: 1px solid var(--rule-strong);
+}
+
+.container {
+  width: min(100%, 90rem);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+.heroGrid {
+  display: grid;
+}
+
+.heroCopy {
+  padding-block: 3.5rem;
+  animation: rise 220ms ease-out both;
+}
+
+.heroTitle {
+  max-width: 11ch;
+  margin-top: 1.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(3.2rem, 8vw, 6.5rem);
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: -0.055em;
+}
+
+.heroSub {
+  max-width: 39rem;
+  margin-top: 1.75rem;
+  color: var(--ink-2);
+  font-size: 1.1rem;
+  line-height: 1.75;
+}
+
+.heroSimulator {
+  border-top: 1px solid var(--rule-strong);
+  padding-block: 2rem 3rem;
+  animation: rise 220ms ease-out 80ms both;
+}
+
+.journeyLinks {
+  display: grid;
+  margin-top: 2rem;
+  border-block: 1px solid var(--rule-strong);
+}
+
+.journeyLink {
+  display: flex;
+  min-height: 7rem;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1rem 0;
+  color: var(--ink);
+  transition: padding 180ms ease-out, color 180ms ease-out;
+}
+
+.journeyLink + .journeyLink { border-top: 1px solid var(--rule); }
+.journeyLink:hover { padding-left: 0.5rem; color: var(--accent); }
+.journeyLabel { color: var(--ink-2); font-size: 0.82rem; }
+.journeyAction { margin-top: 0.4rem; font-family: var(--font-display); font-size: 1.5rem; font-weight: 550; }
+
+.microline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 1.3rem;
+  color: var(--ink-2);
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.kicker {
+  color: var(--accent);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sectionTitle {
+  margin-top: 1rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.sectionIntro {
+  display: grid;
+  gap: 1.5rem;
+  padding-block: 4.5rem 2.5rem;
+}
+
+.sectionLede {
+  max-width: 43rem;
+  color: var(--ink-2);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.problemStatement {
+  max-width: 17ch;
+  padding-block: 4rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 5.2rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.problemList { border-top: 1px solid var(--rule-strong); }
+.problemRow {
+  display: grid;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  padding: 1.25rem 0;
+}
+
+.problemNumber { font-family: var(--font-code); font-size: 0.72rem; color: var(--ink-2); }
+.problemText { font-family: var(--font-display); font-size: 1.45rem; }
+
+.statusTable { border-top: 1px solid var(--rule-strong); }
+.statusRow {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  padding: 1rem 0;
+}
+.statusMark {
+  display: inline-grid;
+  width: 1.15rem;
+  height: 1.15rem;
+  place-items: center;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.statusPass { background: var(--pass); color: white; }
+.statusFail { color: var(--fail); }
+.statusReview { border: 0; color: var(--review); font-size: 1.15rem; }
+.statusMissing { border-style: dashed; color: var(--review); }
+.statusNa { color: var(--neutral); }
+.statusStale { border-radius: 2px; border-style: dashed; color: var(--review); }
+.statusExample { margin-top: 0.3rem; color: var(--ink-2); font-size: 0.875rem; line-height: 1.5; }
+
+.failedAnatomy { border-top: 1px solid var(--rule-strong); }
+.anatomyRow { display: grid; gap: 0.35rem; border-bottom: 1px solid var(--rule); padding: 1rem 0; }
+.anatomyTerm { color: var(--ink-2); font-family: var(--font-code); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.rankedList { counter-reset: rank; border-top: 1px solid var(--rule-strong); }
+.rankedRow { counter-increment: rank; display: grid; grid-template-columns: 2.5rem 1fr; gap: 1rem; border-bottom: 1px solid var(--rule); padding: 1.2rem 0; }
+.rankedRow::before { content: counter(rank, decimal-leading-zero); color: var(--accent); font-family: var(--font-code); font-size: 0.72rem; }
+
+.definitionGrid { border-top: 1px solid var(--rule-strong); }
+.definitionItem { display: grid; gap: 0.35rem; border-bottom: 1px solid var(--rule); padding: 1rem 0; }
+.definitionItem dt { font-weight: 650; }
+.definitionItem dd { color: var(--ink-2); line-height: 1.6; }
+
+.tableWrap { overflow-x: auto; }
+.schemeTable { width: 100%; min-width: 52rem; border-collapse: collapse; text-align: left; }
+.schemeTable th { border-block: 1px solid var(--rule-strong); padding: 0.8rem 1rem 0.8rem 0; color: var(--ink-2); font-family: var(--font-code); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+.schemeTable td { border-bottom: 1px solid var(--rule); padding: 1.2rem 1rem 1.2rem 0; vertical-align: top; font-size: 0.9rem; }
+
+.questions { border-top: 1px solid var(--rule-strong); }
+.question { border-bottom: 1px solid var(--rule); }
+.question summary { min-height: 3.75rem; cursor: pointer; padding: 1rem 2rem 1rem 0; font-family: var(--font-display); font-size: 1.3rem; font-weight: 550; }
+.question p { max-width: 50rem; padding: 0 0 1.25rem; color: var(--ink-2); line-height: 1.7; }
+
+.closing { background: var(--ink); color: var(--paper); }
+.closingGrid { display: grid; }
+.closingJourney { padding-block: 3rem; }
+.closingJourney + .closingJourney { border-top: 1px solid color-mix(in srgb, var(--paper) 28%, transparent); }
+.closingLink { display: inline-block; margin-top: 1.25rem; color: var(--paper); font-family: var(--font-display); font-size: 2rem; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--paper) 35%, transparent); }
+.closingLink:hover { text-decoration-color: var(--paper); }
+.footer { border-top: 1px solid color-mix(in srgb, var(--paper) 22%, transparent); padding-block: 1.5rem; color: color-mix(in srgb, var(--paper) 72%, transparent); font-size: 0.78rem; line-height: 1.6; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (min-width: 640px) {
+  .container { padding-inline: 2rem; }
+  .journeyLinks { grid-template-columns: 1fr 1fr; }
+  .journeyLink { padding-right: 2rem; }
+  .journeyLink + .journeyLink { border-top: 0; border-left: 1px solid var(--rule); padding-left: 2rem; }
+  .journeyLink + .journeyLink:hover { padding-left: 2.5rem; }
+  .problemRow { grid-template-columns: 4rem 1fr; align-items: baseline; }
+  .statusRow { grid-template-columns: 1.25rem 10rem 1fr 11rem; align-items: center; }
+  .statusExample { margin-top: 0; }
+  .anatomyRow { grid-template-columns: 10rem 1fr; }
+  .definitionGrid { display: grid; grid-template-columns: 1fr 1fr; }
+  .definitionItem:nth-child(odd) { padding-right: 2rem; border-right: 1px solid var(--rule); }
+  .definitionItem:nth-child(even) { padding-left: 2rem; }
+}
+
+@media (min-width: 1024px) {
+  .container { padding-inline: 3rem; }
+  .heroGrid { grid-template-columns: minmax(0, 0.82fr) minmax(34rem, 1.18fr); min-height: 48rem; }
+  .heroCopy { display: flex; flex-direction: column; justify-content: center; padding: 5rem 3.5rem 5rem 0; }
+  .heroSimulator { display: flex; align-items: center; border-top: 0; border-left: 1px solid var(--rule-strong); padding: 3rem 0 3rem 3rem; }
+  .sectionIntro { grid-template-columns: 0.42fr 0.58fr; align-items: end; padding-block: 6rem 3rem; }
+  .problemGrid { display: grid; grid-template-columns: 0.66fr 1.34fr; gap: 6rem; align-items: start; }
+  .problemStatement { position: sticky; top: 8rem; }
+  .problemList { margin-block: 6rem; }
+  .checkReportGrid { display: grid; grid-template-columns: 1.12fr 0.88fr; gap: 5rem; padding-bottom: 6rem; }
+  .decisionGrid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 5rem; align-items: start; }
+  .closingGrid { grid-template-columns: 1fr 1fr; }
+  .closingJourney { padding-block: 4rem; }
+  .closingJourney:first-child { padding-right: 3rem; }
+  .closingJourney + .closingJourney { border-top: 0; border-left: 1px solid color-mix(in srgb, var(--paper) 28%, transparent); padding-left: 3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroCopy,
+  .heroSimulator { animation: none; }
+}

@@ -7,7 +7,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { Button, Card, ErrorBanner, PageHeader, TextField } from "@/components/ui";
+import { AuthFrame } from "@/components/auth-frame";
+import { AppIcon } from "@/components/icons";
+import { Button, ErrorBanner, TextField } from "@/components/ui";
+import { isGoogleSignInConfigured } from "@/lib/sevafix/amplify-auth";
 import { useAuth } from "@/lib/sevafix/auth-context";
 
 const schema = z
@@ -30,9 +33,10 @@ const schema = z
 type FormValues = z.infer<typeof schema>;
 
 export default function SignupPage() {
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const {
     register,
     handleSubmit,
@@ -49,12 +53,38 @@ export default function SignupPage() {
     }
   }
 
+  async function onGoogleSignUp() {
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start Google sign-up");
+      setGoogleLoading(false);
+    }
+  }
+
   return (
-    <div className="mx-auto max-w-sm">
-      <PageHeader title="Create account" />
-      <Card>
+    <AuthFrame
+      eyebrow="Get started"
+      title="Create your SevaFix account"
+      description="Start a private workspace for your applications. We only ask for what is needed to secure your account."
+      footer={<span>Already have an account? <Link href="/login" className="font-bold text-blue-700 hover:text-blue-800">Log in</Link></span>}
+    >
+        <ErrorBanner message={error} />
+        {isGoogleSignInConfigured ? (
+          <>
+            <Button type="button" variant="secondary" className="w-full" loading={googleLoading} onClick={onGoogleSignUp}>
+              <span className="grid h-5 w-5 place-items-center rounded-full border border-[var(--rule)] text-[11px] font-bold text-[#4285f4]">G</span>
+              Continue with Google
+            </Button>
+            <div className="relative my-5 text-center text-xs text-[var(--ink-2)]">
+              <span className="relative z-10 bg-[var(--sheet)] px-3">or create an account with email</span>
+              <span className="absolute inset-x-0 top-1/2 border-t border-[var(--rule)]" />
+            </div>
+          </>
+        ) : null}
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <ErrorBanner message={error} />
           <TextField
             label="Email"
             type="email"
@@ -78,15 +108,9 @@ export default function SignupPage() {
             {...register("confirmPassword")}
           />
           <Button type="submit" className="w-full" loading={isSubmitting}>
-            Create account
+            Create account <AppIcon name="arrow-right" size={16} />
           </Button>
         </form>
-        <div className="mt-4 text-sm">
-          <Link href="/login" className="text-slate-600 underline">
-            Already have an account? Log in
-          </Link>
-        </div>
-      </Card>
-    </div>
+    </AuthFrame>
   );
 }

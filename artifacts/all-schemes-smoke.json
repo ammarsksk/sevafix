@@ -1,0 +1,158 @@
+{
+  "startedAt": "2026-09-20T08:04:08Z",
+  "schemes": [
+    {
+      "schemeId": "ab-pmjay",
+      "policyVersionId": "ab-pmjay-precheck-2026.1",
+      "rules": 2,
+      "formFields": 5,
+      "validation": {
+        "failed": 0,
+        "needsReview": 0,
+        "blocked": 1,
+        "ready": false,
+        "applicable": 2,
+        "label": "ACTION_REQUIRED",
+        "passed": 1
+      }
+    },
+    {
+      "schemeId": "nsap",
+      "policyVersionId": "nsap-precheck-2026.1",
+      "rules": 3,
+      "formFields": 6,
+      "validation": {
+        "failed": 0,
+        "needsReview": 0,
+        "label": "ACTION_REQUIRED",
+        "passed": 2,
+        "ready": false,
+        "applicable": 3,
+        "blocked": 1
+      }
+    },
+    {
+      "schemeId": "pm-kisan",
+      "policyVersionId": "pm-kisan-precheck-2026.1",
+      "rules": 4,
+      "formFields": 6,
+      "validation": {
+        "blocked": 1,
+        "failed": 0,
+        "needsReview": 0,
+        "passed": 3,
+        "applicable": 4,
+        "ready": false,
+        "label": "ACTION_REQUIRED"
+      }
+    },
+    {
+      "schemeId": "pm-svanidhi",
+      "policyVersionId": "pm-svanidhi-precheck-2026.2",
+      "rules": 3,
+      "formFields": 5,
+      "validation": {
+        "passed": 2,
+        "needsReview": 0,
+        "failed": 0,
+        "applicable": 3,
+        "blocked": 1,
+        "label": "READY_WITH_SEVAFIX_CHECKS",
+        "ready": true
+      }
+    },
+    {
+      "schemeId": "pm-usp-csss",
+      "policyVersionId": "pm-usp-csss-2026-27.3",
+      "rules": 17,
+      "formFields": 22,
+      "validation": {
+        "ready": false,
+        "label": "ACTION_REQUIRED",
+        "blocked": 7,
+        "failed": 0,
+        "passed": 6,
+        "applicable": 13,
+        "needsReview": 0
+      }
+    },
+    {
+      "schemeId": "pm-vishwakarma",
+      "policyVersionId": "pm-vishwakarma-precheck-2026.1",
+      "rules": 5,
+      "formFields": 7,
+      "validation": {
+        "failed": 0,
+        "blocked": 2,
+        "ready": false,
+        "label": "ACTION_REQUIRED",
+        "passed": 3,
+        "needsReview": 0,
+        "applicable": 5
+      }
+    },
+    {
+      "schemeId": "pmay-g",
+      "policyVersionId": "pmay-g-precheck-2026.1",
+      "rules": 4,
+      "formFields": 6,
+      "validation": {
+        "needsReview": 0,
+        "label": "ACTION_REQUIRED",
+        "blocked": 1,
+        "passed": 3,
+        "applicable": 4,
+        "ready": false,
+        "failed": 0
+      }
+    },
+    {
+      "schemeId": "pmay-u-2",
+      "policyVersionId": "pmay-u-2-precheck-2026.1",
+      "rules": 4,
+      "formFields": 6,
+      "validation": {
+        "passed": 0,
+        "label": "ACTION_REQUIRED",
+        "blocked": 4,
+        "applicable": 4,
+        "needsReview": 0,
+        "ready": false,
+        "failed": 0
+      }
+    },
+    {
+      "schemeId": "pmmvy",
+      "policyVersionId": "pmmvy-precheck-2026.1",
+      "rules": 4,
+      "formFields": 6,
+      "validation": {
+        "failed": 0,
+        "ready": false,
+        "applicable": 4,
+        "blocked": 1,
+        "needsReview": 0,
+        "passed": 3,
+        "label": "ACTION_REQUIRED"
+      }
+    },
+    {
+      "schemeId": "pmuy",
+      "policyVersionId": "pmuy-precheck-2026.1",
+      "rules": 4,
+      "formFields": 6,
+      "validation": {
+        "passed": 2,
+        "needsReview": 0,
+        "applicable": 4,
+        "ready": false,
+        "failed": 0,
+        "blocked": 2,
+        "label": "ACTION_REQUIRED"
+      }
+    }
+  ],
+  "completedAt": "2026-09-20T08:05:31Z",
+  "status": "PASS",
+  "temporaryUserDeleted": true
+}

@@ -3,11 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { sevaFixApi } from "./sevafix-api";
-import type { DraftFields, OpenGrievanceInput } from "./sevafix-types";
+import type { ApplicationView, DraftFields, OpenGrievanceInput } from "./sevafix-types";
 
 export const qk = {
   me: ["me"] as const,
   schemes: ["schemes"] as const,
+  scheme: (schemeId: string) => ["scheme", schemeId] as const,
   applications: ["applications"] as const,
   application: (appId: string) => ["application", appId] as const,
   sourceChanges: ["sourceChanges"] as const,
@@ -28,6 +29,14 @@ export function useUpdateMe() {
 
 export function useSchemes() {
   return useQuery({ queryKey: qk.schemes, queryFn: sevaFixApi.schemes });
+}
+
+export function useScheme(schemeId: string) {
+  return useQuery({
+    queryKey: qk.scheme(schemeId),
+    queryFn: () => sevaFixApi.scheme(schemeId),
+    enabled: Boolean(schemeId),
+  });
 }
 
 export function useApplications() {
@@ -87,7 +96,21 @@ export function useConfirmDocumentFacts(appId: string) {
   return useMutation({
     mutationFn: ({ documentId, facts }: { documentId: string; facts: Record<string, unknown> }) =>
       sevaFixApi.confirmDocumentFacts(appId, documentId, facts),
-    onSuccess: () => client.invalidateQueries({ queryKey: qk.application(appId) }),
+    onSuccess: (confirmedDocument) => {
+      // The mutation response is strongly consistent. Apply it directly so an
+      // immediately following DynamoDB query cannot restore the stale
+      // NEEDS_USER_CONFIRMATION state while the table catches up.
+      client.setQueryData<ApplicationView>(qk.application(appId), (current) =>
+        current
+          ? {
+              ...current,
+              documents: current.documents.map((document) =>
+                document.documentId === confirmedDocument.documentId ? confirmedDocument : document,
+              ),
+            }
+          : current,
+      );
+    },
   });
 }
 
@@ -95,7 +118,18 @@ export function useDeleteDocument(appId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (documentId: string) => sevaFixApi.deleteDocument(documentId),
-    onSuccess: () => client.invalidateQueries({ queryKey: qk.application(appId) }),
+    onSuccess: (deletedDocument) => {
+      client.setQueryData<ApplicationView>(qk.application(appId), (current) =>
+        current
+          ? {
+              ...current,
+              documents: current.documents.filter(
+                (document) => document.documentId !== deletedDocument.documentId,
+              ),
+            }
+          : current,
+      );
+    },
   });
 }
 

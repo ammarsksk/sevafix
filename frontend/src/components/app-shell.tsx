@@ -6,63 +6,50 @@ import type { ReactNode } from "react";
 
 import { useAuth } from "@/lib/sevafix/auth-context";
 
-import { Button } from "./ui";
+import styles from "./authenticated-shell.module.css";
+import { Brand } from "./brand";
+import { CommandMenu } from "./command-menu";
+import { LandingHeader } from "./landing-header";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/schemes", label: "New application" },
-  { href: "/grievances", label: "Grievance" },
+  { href: "/dashboard", label: "Applications" },
+  { href: "/schemes", label: "Schemes" },
+  { href: "/grievances", label: "Diagnose" },
   { href: "/settings", label: "Settings" },
 ];
 
 const reviewerNavItems = [
   { href: "/review/source-changes", label: "Source changes" },
-  { href: "/review/policies", label: "Policies" },
+  { href: "/review/policies", label: "Policy publishing" },
 ];
 
+function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return <Link href={href} aria-current={active ? "page" : undefined} className={`${styles.navLink} ${active ? styles.navActive : ""}`}>{label}</Link>;
+}
 export function AppShell({ children }: { children: ReactNode }) {
   const { status, isReviewer, signOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-
   const authed = status === "authenticated";
+  const home = pathname === "/";
+  const reviewer = pathname.startsWith("/review/");
+  const fullBleed = home || pathname === "/specimen" || pathname === "/lab" || reviewer;
+  const allNavItems = reviewer ? [{ href: "/dashboard", label: "Citizen workspace" }, ...reviewerNavItems] : [...navItems, ...(isReviewer ? reviewerNavItems : [])];
+
+  if (home && !authed) return <div className="min-h-screen bg-[var(--paper)]"><LandingHeader /><main className="w-full">{children}</main></div>;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link href={authed ? "/dashboard" : "/"} className="text-lg font-semibold text-slate-900">
-            SevaFix
-          </Link>
-          {authed ? (
-            <nav className="flex items-center gap-1">
-              {[...navItems, ...(isReviewer ? reviewerNavItems : [])].map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                    pathname?.startsWith(item.href)
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <Button
-                variant="ghost"
-                onClick={async () => {
-                  await signOut();
-                  router.replace("/login");
-                }}
-              >
-                Sign out
-              </Button>
-            </nav>
-          ) : null}
+    <div className="min-h-screen bg-[var(--paper)]">
+      <header className={`${styles.header} ${reviewer ? styles.reviewerHeader : ""}`}>
+        <div className={`${styles.row} mx-auto max-w-[1440px]`}>
+          <Brand href={authed ? "/dashboard" : "/"} />
+          {authed ? <nav className={styles.nav} aria-label="Primary navigation">{allNavItems.map((item) => <NavLink key={item.href} {...item} active={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))} />)}</nav> : null}
+          {authed ? <div className={styles.actions}><CommandMenu /><button type="button" className={styles.signOut} onClick={async () => { await signOut(); router.replace("/login"); }}>Sign out</button></div> : <div className={styles.actions}><Link href="/login" className={styles.signOut}>Sign in</Link></div>}
         </div>
+        {authed ? <nav className={styles.mobileNav} aria-label="Primary navigation">{allNavItems.map((item) => <NavLink key={item.href} {...item} active={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))} />)}</nav> : null}
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+      <main className={fullBleed ? styles.fullBleed : styles.main}>{children}</main>
     </div>
   );
 }
+

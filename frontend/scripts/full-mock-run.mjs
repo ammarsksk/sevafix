@@ -18,7 +18,7 @@ await fs.mkdir(artifactDir, { recursive: true });
 
 const documents = [
   ["Class XII marksheet", "sevafix_mock_class_xii_marksheet.pdf"],
-  ["Family income certificate", "sevafix_mock_income_certificate.pdf"],
+  ["Family income certificate", "sevafix_mock_income_certificate_FAULTY.pdf"],
   ["Admission/course/institution evidence", "sevafix_mock_admission_letter.pdf"],
   ["Identity evidence for consistency check", "sevafix_mock_identity_proof.pdf"],
 ];
@@ -54,6 +54,42 @@ async function recordRoute(route) {
   report.routes.push({ route, url: page.url(), at: new Date().toISOString() });
 }
 
+async function readinessSummary() {
+  const values = {};
+  for (const label of ["Passed", "Needs fixing", "Needs review", "Blocked"]) {
+    const term = page.locator("dt").filter({ hasText: new RegExp(`^${label}$`, "i") }).first();
+    await term.waitFor({ timeout: 120_000 });
+    values[label] = Number.parseInt(await term.locator("..").locator("dd").innerText(), 10);
+  }
+  return `${values.Passed} passed · ${values["Needs fixing"]} failed · ${values["Needs review"]} need review · ${values.Blocked} blocked`;
+}
+
+async function confirmPendingFacts(incomeValue) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const confirmButtons = page.getByRole("button", { name: "Confirm extracted information", exact: true });
+    const countBefore = await confirmButtons.count();
+    if (countBefore === 0) break;
+    const button = confirmButtons.first();
+    const form = button.locator("..");
+    const primaryName = form.getByLabel(/Primaryname/i);
+    if ((await primaryName.count()) > 0) await primaryName.fill("Aarav Mehta");
+    const income = form.getByLabel(/Annualincomeinr/i);
+    if ((await income.count()) > 0) await income.fill(String(incomeValue));
+    await button.click();
+    await page.waitForFunction(
+      (previousCount) =>
+        [...document.querySelectorAll("button")].filter(
+          (candidate) => candidate.textContent?.trim() === "Confirm extracted information",
+        ).length < previousCount,
+      countBefore,
+      { timeout: 30_000 },
+    );
+  }
+  if ((await page.getByRole("button", { name: "Confirm extracted information", exact: true }).count()) > 0) {
+    throw new Error("Some extracted document facts could not be confirmed");
+  }
+}
+
 try {
   await page.goto(`${baseUrl}/login`, { waitUntil: "networkidle" });
   await page.getByLabel("Email").fill(email);
@@ -62,7 +98,7 @@ try {
   await page.waitForURL("**/dashboard", { timeout: 30_000 });
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      await page.getByRole("heading", { name: /Welcome/ }).waitFor({ timeout: 8_000 });
+      await page.getByRole("heading", { name: /Your applications|applications$/i }).waitFor({ timeout: 8_000 });
       break;
     } catch (error) {
       if (attempt === 2) throw error;
@@ -72,11 +108,11 @@ try {
   await recordRoute("dashboard");
   await screenshot("01-dashboard");
 
-  await page.getByRole("button", { name: "Start from scratch", exact: true }).click();
+  await page.getByRole("link", { name: "Browse supported schemes", exact: true }).click();
   await page.waitForURL("**/schemes");
-  await page.getByRole("heading", { name: "Create a new application", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Supported schemes", exact: true }).waitFor();
   const schemeNames = (await page.locator("h2").allTextContents()).map((name) => name.trim()).filter(Boolean);
-  const officialPortalCount = await page.getByRole("link", { name: "Official government portal" }).count();
+  const officialPortalCount = await page.getByRole("link", { name: "Official portal" }).count();
   if (officialPortalCount < 10 || schemeNames.length < 10) {
     throw new Error(`Expected at least 10 schemes; found ${schemeNames.length} headings and ${officialPortalCount} official links`);
   }
@@ -84,7 +120,7 @@ try {
   await recordRoute("schemes");
   await screenshot("02-scheme-catalog");
 
-  await page.getByRole("link", { name: "Start application", exact: true }).click();
+  await page.getByRole("article").filter({ hasText: "PM-USP" }).getByRole("link", { name: "Start application", exact: true }).click();
   await page.getByRole("button", { name: "Create draft application", exact: true }).click();
   await page.waitForURL("**/applications/*/edit", { timeout: 30_000 });
   const appId = page.url().match(/\/applications\/([^/]+)\/edit/)?.[1];
@@ -94,7 +130,7 @@ try {
 
   await page.getByLabel(/Application type/).selectOption("FRESH");
   await page.getByLabel(/Name as on Class XII/).fill("Aarav Mehta");
-  await page.getByLabel(/Gross annual family income/).fill("300000");
+  await page.getByLabel(/Gross annual family income/).fill("350000");
   await page.getByLabel(/Class XII board percentile/).fill("92");
   await chooseBoolean(/Took a drop after Class XII/, "No");
   await chooseBoolean(/Receiving another scholarship/, "No");
@@ -109,17 +145,27 @@ try {
   await page.getByLabel(/AISHE code/).fill("C-99999");
   await chooseBoolean(/Recognized by the relevant regulatory body/, "Yes");
   await chooseBoolean(/Institution status is active on AISHE/, "Yes");
-  await page.getByText(/Last saved/).waitFor({ timeout: 30_000 });
+  await page.waitForFunction(
+    () => {
+      const saveButton = [...document.querySelectorAll("button")].find((button) => button.textContent?.includes("Save now"));
+      const hasUnsavedChanges = document.body.innerText.includes("Unsaved changes");
+      return saveButton && hasUnsavedChanges && !saveButton.disabled;
+    },
+    { timeout: 30_000 },
+  );
+  await page.getByRole("button", { name: "Save now", exact: true }).click();
+  await page.getByText("Unsaved changes", { exact: true }).waitFor({ state: "detached", timeout: 30_000 });
+  await page.getByText(/^Saved /).waitFor({ timeout: 30_000 });
   await screenshot("03-completed-draft");
 
-  await page.getByRole("link", { name: "Documents", exact: true }).click();
+  await page.getByRole("link", { name: /^Documents/ }).click();
   await page.waitForURL("**/applications/*/documents");
   await recordRoute("documents");
   for (const [label, filename] of documents) {
-    const slot = page.getByText(label, { exact: true }).locator("..");
+    const slot = page.getByText(label, { exact: true }).locator('xpath=ancestor::div[.//input[@type="file"]][1]');
     await slot.locator('input[type="file"]').setInputFiles(path.join(documentDir, filename));
   }
-  for (const documentType of ["MARKSHEET", "INCOME_CERTIFICATE", "ADMISSION_LETTER", "IDENTITY_PROOF"]) {
+  for (const documentType of ["Marksheet", "Income certificate", "Admission letter", "Identity proof"]) {
     await page.getByText(documentType, { exact: true }).waitFor({ timeout: 45_000 });
   }
 
@@ -132,70 +178,57 @@ try {
     { timeout: 300_000 },
   );
 
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const confirmButtons = page.getByRole("button", { name: "Confirm details", exact: true });
-    if ((await confirmButtons.count()) === 0) break;
-    const button = confirmButtons.first();
-    const form = button.locator('xpath=ancestor::div[contains(@class,"border-amber-300")]');
-    const primaryName = form.getByLabel("primaryName", { exact: true });
-    if ((await primaryName.count()) > 0) await primaryName.fill("Aarav Mehta");
-    const income = form.getByLabel("annualIncomeINR", { exact: true });
-    if ((await income.count()) > 0) await income.fill("300000");
-    await button.click();
-    await page.waitForTimeout(500);
-  }
-  if ((await page.getByRole("button", { name: "Confirm details", exact: true }).count()) > 0) {
-    throw new Error("Some extracted document facts could not be confirmed");
-  }
+  await confirmPendingFacts(900000);
   report.documentPipeline = "PASS";
   report.documentPageText = await page.locator("body").innerText();
   await screenshot("04-documents-processed");
 
-  await page.getByRole("link", { name: "Check", exact: true }).click();
+  await page.getByRole("link", { name: /^Checks/ }).click();
   await page.waitForURL("**/applications/*/check");
   await recordRoute("check");
-  await page.getByRole("button", { name: "Run validation", exact: true }).click();
-  await page.getByText(/passed .* failed .* need review .* blocked/i).waitFor({ timeout: 120_000 });
-  const readinessText = await page.getByText(/passed .* failed .* need review .* blocked/i).innerText();
-  report.validation = readinessText;
-  await screenshot("05-validation-results");
+  await page.getByRole("button", { name: /Run application checks|Run checks again/ }).click();
+  const readinessText = await readinessSummary();
+  if (!/[1-9][0-9]* failed/i.test(readinessText)) throw new Error(`Faulty document was not rejected: ${readinessText}`);
+  await page.getByText("fresh income certificate match", { exact: true }).waitFor();
+  report.faultyValidation = readinessText;
+  await screenshot("05-fault-detected");
 
-  await page.getByRole("link", { name: "Review & freeze", exact: true }).click();
+  await page.getByRole("link", { name: /^Review/ }).click();
   await page.waitForURL("**/applications/*/review");
   await recordRoute("review");
-  await page.getByRole("button", { name: "Freeze this version", exact: true }).click();
-  await page.getByRole("button", { name: "Freeze version", exact: true }).click();
-  await page.getByText("Version 1", { exact: true }).waitFor({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Create submission version", exact: true }).click();
+  await page.getByRole("button", { name: "Create version", exact: true }).click();
+  await page.getByText("V01", { exact: true }).waitFor({ timeout: 30_000 });
   report.frozenVersion = 1;
   await screenshot("06-frozen-version");
 
-  await page.getByRole("link", { name: "Tracking", exact: true }).click();
-  await page.waitForURL("**/applications/*/tracking");
+  await page.getByRole("link", { name: /^Tracking/ }).click();
+  await page.waitForURL("**/applications/*/tracking*");
   await recordRoute("tracking");
   const officialApplicationId = `NSP-MOCK-${Date.now()}`;
   await page.getByLabel("Official application ID").fill(officialApplicationId);
-  await page.getByLabel("Submitted at").fill("2026-09-20T02:00");
+  await page.getByLabel("Submission date and time").fill("2026-09-20T02:00");
   await page.getByRole("button", { name: "Record submission", exact: true }).click();
-  await page.getByText(/Recorded:/).waitFor({ timeout: 30_000 });
+  await page.getByText(/Official application ID · redacted/).waitFor({ timeout: 30_000 });
   await page.getByLabel("Details").fill("Synthetic full-flow mock run completed; no government submission was made.");
-  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  await page.getByRole("button", { name: "Add to history", exact: true }).click();
   await page.getByText(/Synthetic full-flow mock run completed/).waitFor({ timeout: 30_000 });
   report.tracking = { officialApplicationId, noteRecorded: true, externalSubmissionMade: false };
   await screenshot("07-tracking-timeline");
 
-  await page.getByRole("link", { name: "Diagnose", exact: true }).click();
+  await page.getByRole("link", { name: "Diagnose Evidence and repair", exact: true }).click();
   await page.waitForURL("**/applications/*/diagnose");
   await recordRoute("diagnose");
-  await page.getByLabel("Rejection reason").fill(
-    "Mock reviewer returned the synthetic application because the income certificate could not be verified.",
-  );
-  await page.getByRole("button", { name: "Diagnose", exact: true }).click();
-  await page.getByText("Latest diagnosis", { exact: true }).waitFor({ timeout: 180_000 });
-  const diagnosisCard = page.getByText("Latest diagnosis", { exact: true }).locator("..");
+  await page.getByLabel("Official reason, if provided").fill("");
+  await page.getByRole("button", { name: "Review available evidence", exact: true }).click();
+  await page.getByText("Likely issue", { exact: true }).waitFor({ timeout: 180_000 });
+  await page.getByRole("heading", { name: "Income mismatch", exact: true }).waitFor();
+  await page.getByText(/inference, not an official rejection reason/i).waitFor();
+  const diagnosisCard = page.getByText("Likely issue", { exact: true }).locator("..");
   report.diagnosis = await diagnosisCard.innerText();
   await screenshot("08-diagnosis");
 
-  const repairButton = page.getByRole("button", { name: "Start corrected application", exact: true });
+  const repairButton = page.getByRole("button", { name: "Create corrected version", exact: true });
   if (await repairButton.isEnabled()) {
     await repairButton.click();
     await page.waitForURL("**/applications/*/edit", { timeout: 30_000 });
@@ -205,6 +238,33 @@ try {
   } else {
     report.repairDraftCreated = false;
   }
+
+  await page.getByRole("link", { name: /^Documents/ }).click();
+  await page.waitForURL("**/applications/*/documents");
+  const faultyDocumentCard = page
+    .getByText("Income certificate", { exact: true })
+    .locator("xpath=ancestor::tr[1]");
+  await faultyDocumentCard.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("button", { name: "Delete document", exact: true }).click();
+  await faultyDocumentCard.waitFor({ state: "detached", timeout: 30_000 });
+  const incomeSlot = page.getByText("Family income certificate", { exact: true }).locator('xpath=ancestor::div[.//input[@type="file"]][1]');
+  await incomeSlot.locator('input[type="file"]').setInputFiles(path.join(documentDir, "sevafix_mock_income_certificate_CORRECTED.pdf"));
+  await page.getByText("Income certificate", { exact: true }).waitFor({ timeout: 45_000 });
+  const correctedDocumentCard = page
+    .getByText("Income certificate", { exact: true })
+    .locator("xpath=ancestor::tr[1]");
+  await correctedDocumentCard.getByText(/Extracted|Needs your confirmation|Confirmed/).waitFor({ timeout: 300_000 });
+  await confirmPendingFacts(350000);
+  await screenshot("10-corrected-document");
+
+  await page.getByRole("link", { name: /^Checks/ }).click();
+  await page.getByRole("button", { name: /Run application checks|Run checks again/ }).click();
+  const correctedText = await readinessSummary();
+  if (!/0 failed/i.test(correctedText) || !/0 blocked/i.test(correctedText)) {
+    throw new Error(`Corrected application did not become ready: ${correctedText}`);
+  }
+  report.correctedValidation = correctedText;
+  await screenshot("11-correction-passed");
 
   if (browserErrors.length) throw new Error(`Browser page errors: ${browserErrors.join(" | ")}`);
   report.status = "PASS";

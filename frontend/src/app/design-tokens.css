@@ -1,0 +1,47 @@
+:root {
+  --paper: #f5f2ea;
+  --sheet: #fbfaf6;
+  --ink: #16191c;
+  --ink-2: #5b615f;
+  --rule: #dad5c8;
+  --rule-strong: #bbb5a7;
+  --accent: #0e4f4b;
+  --accent-hover: #0a3e3b;
+  --accent-soft: #e4eeea;
+  --evidence: #f4e3a1;
+  --pass: #2f6b3f;
+  --fail: #b3372b;
+  --review: #a86a12;
+  --neutral: #6b7280;
+
+  --font-display: var(--font-newsreader), Newsreader, "Noto Serif Devanagari", Georgia, serif;
+  --font-ui: var(--font-hanken), "Hanken Grotesk", "Noto Sans Devanagari", Arial, sans-serif;
+  --font-code: var(--font-plex-mono), "IBM Plex Mono", Consolas, monospace;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --radius: 3px;
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+
+  /* Compatibility aliases used by the current application during migration. */
+  --surface: var(--sheet);
+  --muted: var(--ink-2);
+  --line: var(--rule);
+  --line-strong: var(--rule-strong);
+  --civic: var(--accent);
+  --civic-hover: var(--accent-hover);
+  --civic-soft: var(--accent-soft);
+  --success: var(--pass);
+  --success-soft: #e8f1e9;
+  --warning: var(--review);
+  --warning-soft: #fbf0dc;
+  --danger: var(--fail);
+  --danger-soft: #f8e8e5;
+}

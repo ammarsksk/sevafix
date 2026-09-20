@@ -1,128 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 
-import { ReviewerRoute } from "@/components/route-guards";
-import {
-  Button,
-  Card,
-  ConfirmModal,
-  ErrorBanner,
-  FullPageSpinner,
-  PageHeader,
-  StatusChip,
-  TextField,
-} from "@/components/ui";
-import { useApproveSourceChange, useRejectSourceChange, useSourceChanges } from "@/lib/sevafix/queries";
+import { ErrorBanner, FullPageSpinner, StatusChip } from "@/components/ui";
+import styles from "@/components/reviewer-console.module.css";
+import { useSourceChanges } from "@/lib/sevafix/queries";
 import { reviewStateChip } from "@/lib/status";
 
-function SourceChangesContent() {
+export default function SourceChangesPage() {
   const sourceChanges = useSourceChanges();
-  const approve = useApproveSourceChange();
-  const reject = useRejectSourceChange();
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  if (sourceChanges.isLoading) return <FullPageSpinner />;
+  if (sourceChanges.isLoading) return <FullPageSpinner label="Loading review queue…" />;
+  if (sourceChanges.error) return <ErrorBanner message={sourceChanges.error instanceof Error ? sourceChanges.error.message : "Could not load source changes"} />;
 
   const items = sourceChanges.data?.items ?? [];
-
-  async function onApprove(changeId: string) {
-    setError(null);
-    try {
-      await approve.mutateAsync(changeId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not approve change");
-    }
-  }
-
-  async function onConfirmReject() {
-    if (!rejectingId) return;
-    setError(null);
-    try {
-      await reject.mutateAsync({ changeId: rejectingId, reason });
-      setRejectingId(null);
-      setReason("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not reject change");
-    }
-  }
-
   return (
     <div>
-      <PageHeader
-        title="Source changes"
-        description="Review detected changes to official scheme sources before they affect policy."
-      />
-      <ErrorBanner message={error} />
+      <header className={styles.masthead}>
+        <div><p className={styles.kicker}>01 / Source change queue</p><h1 className={styles.title}>Review detected source changes</h1><p className={styles.description}>Confirm changes against the official source before they can influence a policy version. Queue rows contain metadata only.</p></div>
+        <p className={styles.meta}>ROLE / POLICY REVIEWER</p>
+      </header>
 
-      {items.length === 0 ? (
-        <Card>
-          <p className="text-sm text-slate-500">No source changes are pending review.</p>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {items.map((change) => (
-            <Card key={change.changeId}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{change.title ?? change.sourceId}</p>
-                  {change.sourceUrl ? (
-                    <a
-                      href={change.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-slate-500 underline"
-                    >
-                      {change.sourceUrl}
-                    </a>
-                  ) : null}
-                  <p className="mt-1 text-xs text-slate-500">
-                    Detected {change.detectedAt ? new Date(change.detectedAt).toLocaleString() : "—"}
-                  </p>
-                </div>
-                <StatusChip spec={reviewStateChip(change.reviewState)} />
-              </div>
-              {change.reviewState === "CHANGED" ? (
-                <div className="mt-3 flex gap-2">
-                  <Button onClick={() => onApprove(change.changeId)} loading={approve.isPending}>
-                    Approve
-                  </Button>
-                  <Button variant="secondary" onClick={() => setRejectingId(change.changeId)}>
-                    Reject
-                  </Button>
-                </div>
-              ) : null}
-            </Card>
-          ))}
-        </div>
-      )}
+      <div className={styles.toolbar}><p className={styles.queueCount}>{String(items.length).padStart(2, "0")} ITEMS AWAITING REVIEW</p><span className={styles.keyHint}>TAB TO NAVIGATE</span></div>
 
-      {rejectingId ? (
-        <ConfirmModal
-          title="Reject source change"
-          description={
-            <TextField label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} />
-          }
-          confirmLabel="Reject"
-          danger
-          onConfirm={onConfirmReject}
-          onClose={() => {
-            setRejectingId(null);
-            setReason("");
-          }}
-          busy={reject.isPending}
-        />
-      ) : null}
+      {items.length === 0 ? <div className={styles.empty}>No source changes are pending review.</div> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Change</th><th>Source</th><th>Scheme</th><th>Detected</th><th>State</th><th>Review</th></tr></thead><tbody>{items.map((change, index) => <tr key={change.changeId}><td className={styles.mono}>{String(index + 1).padStart(2, "0")}</td><td><strong>{change.title ?? change.sourceId}</strong><p className={`${styles.mono} mt-1 text-[var(--ink-2)]`}>{change.contentSha256.slice(0, 16)}…</p></td><td className={styles.mono}>{change.schemeId ?? "—"}</td><td className={styles.mono}>{change.detectedAt ? new Date(change.detectedAt).toLocaleString() : "—"}</td><td><StatusChip spec={reviewStateChip(change.reviewState)} /></td><td><Link href={`/review/source-changes/${encodeURIComponent(change.changeId)}`} className={styles.link}>Open review →</Link></td></tr>)}</tbody></table></div>}
+
+      <div className={styles.unavailable}><strong>Snapshot viewing not yet available</strong>The backend exposes the private snapshot key but no signed viewer or content endpoint. Reviewers must use the linked official source until secure snapshot access is added.</div>
     </div>
-  );
-}
-
-export default function SourceChangesPage() {
-  return (
-    <ReviewerRoute>
-      <SourceChangesContent />
-    </ReviewerRoute>
   );
 }
