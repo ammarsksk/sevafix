@@ -49,13 +49,14 @@ class Store:
             kwargs["ExpressionAttributeValues"] = _to_decimal(values)
         self.table.delete_item(**kwargs)
 
-    def query(self, pk: str, *, begins_with: str | None = None, limit: int | None = None, forward: bool = True) -> list[dict[str, Any]]:
+    def query(self, pk: str, *, begins_with: str | None = None, limit: int | None = None, forward: bool = True, consistent: bool = False) -> list[dict[str, Any]]:
         expression = Key("PK").eq(pk)
         if begins_with:
             expression &= Key("SK").begins_with(begins_with)
         kwargs: dict[str, Any] = {
             "KeyConditionExpression": expression,
             "ScanIndexForward": forward,
+            "ConsistentRead": consistent,
         }
         if limit:
             kwargs["Limit"] = limit

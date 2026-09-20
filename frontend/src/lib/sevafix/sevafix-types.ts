@@ -189,6 +189,8 @@ export interface CheckResult {
   severity: "BLOCKING" | "ADVISORY" | string;
   actual?: unknown;
   expected?: unknown;
+  actualField?: string;
+  expectedField?: string;
   missingEvidence?: string[];
   sourceRefs?: string[];
   messageKey?: string;
@@ -314,4 +316,3 @@ export interface SourceChange {
   reviewedBy?: string;
   reviewReason?: string;
 }
-

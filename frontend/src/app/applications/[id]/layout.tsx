@@ -33,7 +33,9 @@ function Workspace({ appId, children }: { appId: string; children: ReactNode }) 
   const scheme = useScheme(app?.schemeId ?? "");
   const schemeName = scheme.data?.name ?? app?.schemeId ?? "Application";
   const currentSegment = pathname.split("/").at(-1) ?? "edit";
-  const failedChecks = data?.checks.some((check) => check.status === "FAIL" || check.status.startsWith("BLOCKED"));
+  const latestRunId = app?.lastValidationRunId;
+  const latestChecks = (data?.checks ?? []).filter((check) => !latestRunId || check.runId === latestRunId);
+  const failedChecks = latestChecks.some((check) => check.status === "FAIL" || check.status.startsWith("BLOCKED"));
   const pendingDocuments = data?.documents.some((document) => ["PENDING_UPLOAD", "UPLOADED", "OCR_RUNNING", "NEEDS_USER_CONFIRMATION"].includes(document.state));
 
   const stageState = (stage: Stage): "complete" | "attention" | "current" | "pending" => {
@@ -41,7 +43,7 @@ function Workspace({ appId, children }: { appId: string; children: ReactNode }) 
     if (active) return "current";
     if (stage.label === "Form") return app && Object.keys(app.draftFields ?? {}).length > 0 ? "complete" : "pending";
     if (stage.label === "Documents") return pendingDocuments ? "attention" : data?.documents.length ? "complete" : "pending";
-    if (stage.label === "Checks") return failedChecks ? "attention" : data?.validationRuns.length ? "complete" : "pending";
+    if (stage.label === "Checks") return failedChecks ? "attention" : latestRunId ? "complete" : "pending";
     if (stage.label === "Review") return data?.versions.length ? "complete" : "pending";
     if (stage.label === "Submission") return app?.submittedAt ? "complete" : "pending";
     if (stage.label === "Tracking") return data?.timeline.length ? "complete" : "pending";

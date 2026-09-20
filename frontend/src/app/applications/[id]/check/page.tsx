@@ -16,6 +16,8 @@ function CheckRow({ check }: { check: CheckResult }) {
   const passed = check.status === "PASS" || check.status === "NOT_APPLICABLE";
   const mark = passed ? "✓" : check.status === "FAIL" ? "×" : check.status.startsWith("BLOCKED") ? "—" : "◐";
   const markColor = passed ? "text-[var(--pass)]" : check.status === "FAIL" ? "text-[var(--fail)]" : "text-[var(--review)]";
+  const comparesSupportingEvidence = check.expectedField?.startsWith("document.") ?? false;
+  const expectedLabel = comparesSupportingEvidence ? "Supporting document" : "Policy requirement";
   return (
     <details className="group border-b border-[var(--rule)] last:border-b-0">
       <summary className="flex cursor-pointer list-none items-start justify-between gap-5 py-5 [&::-webkit-details-marker]:hidden">
@@ -27,7 +29,7 @@ function CheckRow({ check }: { check: CheckResult }) {
       </summary>
       <div className="mb-6 ml-0 border-l-2 border-[var(--accent)] bg-[var(--accent-soft)] p-5 sm:ml-8">
         <dl className="grid gap-5 sm:grid-cols-2">
-          <div><dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--ink-2)]">What we found</dt><dd className="mt-2 text-sm text-[var(--ink-2)]">Actual: <span className="font-semibold text-[var(--ink)]">{displayValue(check.actual)}</span><br />Expected: <span className="font-semibold text-[var(--ink)]">{displayValue(check.expected)}</span></dd></div>
+          <div><dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--ink-2)]">What we compared</dt><dd className="mt-2 text-sm text-[var(--ink-2)]">Application value: <span className="font-semibold text-[var(--ink)]">{displayValue(check.actual)}</span><br />{expectedLabel}: <span className="font-semibold text-[var(--ink)]">{displayValue(check.expected)}</span></dd></div>
           <div><dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--ink-2)]">Why it matters</dt><dd className="mt-2 text-sm text-[var(--ink-2)]">{check.message}</dd></div>
           <div><dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--ink-2)]">What to do</dt><dd className="mt-2 text-sm text-[var(--ink-2)]">{passed ? "No action is required for this check." : check.missingEvidence?.length ? `Add or confirm: ${check.missingEvidence.join(", ")}.` : "Review the application value and its supporting evidence before continuing."}</dd></div>
           <div><dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--ink-2)]">Evidence</dt><dd className="mt-2 text-sm text-[var(--ink-2)]">{check.sourceRefs?.length ? check.sourceRefs.join(", ") : "No source reference was returned for this check."}</dd></div>
@@ -81,4 +83,3 @@ export default function CheckPage() {
     </div>
   );
 }
-

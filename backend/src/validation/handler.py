@@ -27,7 +27,7 @@ def _facts(meta: dict[str, Any], documents: list[dict[str, Any]]) -> tuple[dict[
         _set_path(result, key, value)
     evidence: set[str] = set()
     primary_name = None
-    document_income = None
+    income_candidates: list[tuple[bool, str, str, Any]] = []
     for document in documents:
         if document.get("state") not in {"EXTRACTED", "NEEDS_USER_CONFIRMATION", "CONFIRMED"}:
             continue
@@ -37,7 +37,12 @@ def _facts(meta: dict[str, Any], documents: list[dict[str, Any]]) -> tuple[dict[
             if name == "primaryName" and not primary_name:
                 primary_name = value
             if name == "annualIncomeINR" and document.get("documentType") == "INCOME_CERTIFICATE":
-                document_income = value
+                timestamp = str(document.get("confirmedAt") or document.get("updatedAt") or document.get("createdAt") or "")
+                income_candidates.append((document.get("state") == "CONFIRMED", timestamp, str(document.get("SK", "")), value))
+    # A corrected certificate supersedes an older certificate. Prefer confirmed
+    # evidence, then the most recently confirmed/updated document; never depend
+    # on the random document UUID returned by DynamoDB query ordering.
+    document_income = max(income_candidates, default=(False, "", "", None))[-1]
     result.setdefault("document", {})["primaryName"] = primary_name
     result["document"]["annualIncomeINR"] = document_income
     return result, evidence
@@ -49,7 +54,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     owner_sub = event["ownerSub"]
     job_id = event.get("jobId")
     meta = store.assert_owner(app_id, owner_sub)
-    documents = [item for item in store.query(f"APP#{app_id}", begins_with="DOC#") if item.get("state") != "DELETED"]
+    documents = [item for item in store.query(f"APP#{app_id}", begins_with="DOC#", consistent=True) if item.get("state") != "DELETED"]
     rules = store.query(f"RULESET#{meta['policyVersionId']}", begins_with="RULE#")
     facts, evidence = _facts(meta, documents)
     run_id = new_id("run")

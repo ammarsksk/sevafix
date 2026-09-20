@@ -109,7 +109,11 @@ export default function DiagnosePage() {
   if (application.isLoading) return <FullPageSpinner />;
   if (!application.data) return <ErrorBanner message={application.error instanceof Error ? application.error.message : "Application not found"} />;
 
-  const supportingCheck = application.data.checks.find((check) => check.status === "FAIL" || check.status === "NEEDS_REVIEW");
+  const latestRunId = application.data.application.lastValidationRunId;
+  const supportingCheck = application.data.checks.find((check) =>
+    (!latestRunId || check.runId === latestRunId)
+    && (check.status === "FAIL" || check.status === "NEEDS_REVIEW" || check.status.startsWith("BLOCKED")),
+  );
   const officialReason = reasonText ?? application.data.application.initialGrievanceReason ?? "";
   const latestRepair = [...application.data.repairs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
