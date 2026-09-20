@@ -30,6 +30,8 @@ def main() -> None:
     session = boto3.Session(profile_name=PROFILE, region_name=REGION)
     outputs = stack_outputs(session)
     cognito = session.client("cognito-idp")
+    requested_frontend_url = (sys.argv[1] if len(sys.argv) > 1 else os.environ.get("SEVAFIX_FRONTEND_URL", "")).rstrip("/")
+    frontend_url = requested_frontend_url or f"http://localhost:{PORT}"
     email = f"full-mock-{int(time.time())}-{secrets.token_hex(3)}@example.invalid"
     password = f"Sv!{secrets.token_urlsafe(18)}9a"
     owner_sub: str | None = None
@@ -38,7 +40,8 @@ def main() -> None:
     try:
         subprocess.run([sys.executable, str(ROOT / "backend" / "scripts" / "create_mock_documents.py")], cwd=ROOT, check=True)
         npm = shutil.which("npm.cmd") or "npm.cmd"
-        subprocess.run([npm, "run", "build"], cwd=FRONTEND, check=True)
+        if not requested_frontend_url:
+            subprocess.run([npm, "run", "build"], cwd=FRONTEND, check=True)
 
         user = cognito.admin_create_user(
             UserPoolId=outputs["UserPoolId"],
@@ -50,30 +53,31 @@ def main() -> None:
         cognito.admin_set_user_password(UserPoolId=outputs["UserPoolId"], Username=email, Password=password, Permanent=True)
         cognito.admin_add_user_to_group(UserPoolId=outputs["UserPoolId"], Username=email, GroupName="citizen")
 
-        server = subprocess.Popen(
-            [npm, "run", "start", "--", "--hostname", "localhost", "--port", str(PORT)],
-            cwd=FRONTEND,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
+        if not requested_frontend_url:
+            server = subprocess.Popen(
+                [npm, "run", "start", "--", "--hostname", "localhost", "--port", str(PORT)],
+                cwd=FRONTEND,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
         deadline = time.time() + 45
         while time.time() < deadline:
             try:
-                with urlopen(f"http://localhost:{PORT}/login", timeout=2) as response:
+                with urlopen(f"{frontend_url}/login", timeout=5) as response:
                     if response.status == 200:
                         break
             except Exception:
                 time.sleep(1)
         else:
-            raise RuntimeError("Next.js demo server did not become ready")
+            raise RuntimeError(f"Frontend did not become ready at {frontend_url}")
 
         env = os.environ.copy()
         env.update(
             {
                 "SEVAFIX_TEST_EMAIL": email,
                 "SEVAFIX_TEST_PASSWORD": password,
-                "SEVAFIX_FRONTEND_URL": f"http://localhost:{PORT}",
+                "SEVAFIX_FRONTEND_URL": frontend_url,
             }
         )
         subprocess.run(["node", "scripts/full-mock-run.mjs"], cwd=FRONTEND, env=env, check=True)

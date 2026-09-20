@@ -3,7 +3,7 @@ param(
     [string]$Stack = "sevafix-dev",
     [string]$Profile = "sevafix-deploy",
     [string]$Region = "ap-south-1",
-    [string]$AllowedOrigin = "http://localhost:3000"
+    [string]$AllowedOrigins = "http://localhost:3000,https://se-336f1f086653422a93c5d50efec9bd01.ecs.ap-south-1.on.aws"
 )
 
 $ErrorActionPreference = "Stop"
@@ -56,7 +56,7 @@ try {
         --no-fail-on-empty-changeset `
         --parameter-overrides `
             "Environment=dev" `
-            "AllowedOrigin=$AllowedOrigin" `
+            "AllowedOrigins=$AllowedOrigins" `
             "EnableMalwareProtection=false" `
             "EnableKnowledgeBase=false" `
             "ManagedKnowledgeBaseId=QDX1TUBOTV" `

@@ -9,4 +9,4 @@ profile = "sevafix-deploy"
 capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
 confirm_changeset = false
 fail_on_empty_changeset = false
-parameter_overrides = "Environment=dev AllowedOrigin=http://localhost:3000 EnableMalwareProtection=false EnableKnowledgeBase=false ManagedKnowledgeBaseId=QDX1TUBOTV ManagedKnowledgeBaseDataSourceId=XEQOEY0VSA ManagedKnowledgeBaseRegion=ap-northeast-1 ManagedKnowledgeBaseBucketName=sevafix-851725360556-ap-northeast-1-dev-managed-kb BedrockMantleModelId=openai.gpt-oss-20b"
+parameter_overrides = "Environment=dev AllowedOrigins=http://localhost:3000,https://se-336f1f086653422a93c5d50efec9bd01.ecs.ap-south-1.on.aws EnableMalwareProtection=false EnableKnowledgeBase=false ManagedKnowledgeBaseId=QDX1TUBOTV ManagedKnowledgeBaseDataSourceId=XEQOEY0VSA ManagedKnowledgeBaseRegion=ap-northeast-1 ManagedKnowledgeBaseBucketName=sevafix-851725360556-ap-northeast-1-dev-managed-kb BedrockMantleModelId=openai.gpt-oss-20b GoogleCallbackUrls=http://localhost:3000,https://se-336f1f086653422a93c5d50efec9bd01.ecs.ap-south-1.on.aws"

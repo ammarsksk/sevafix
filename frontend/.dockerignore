@@ -1,0 +1,10 @@
+.next
+node_modules
+npm-debug.log*
+.env*
+!.env.example
+scripts
+AGENTS.md
+CLAUDE.md
+README.md
+tsconfig.tsbuildinfo

@@ -54,7 +54,7 @@ try {
         --no-fail-on-empty-changeset `
         --parameter-overrides `
             "Environment=dev" `
-            "AllowedOrigin=http://localhost:3000" `
+            "AllowedOrigins=http://localhost:3000,$CallbackUrl" `
             "EnableMalwareProtection=false" `
             "EnableKnowledgeBase=false" `
             "ManagedKnowledgeBaseId=QDX1TUBOTV" `
@@ -64,7 +64,7 @@ try {
             "BedrockMantleModelId=openai.gpt-oss-20b" `
             "GoogleClientId=$googleClientId" `
             "GoogleClientSecret=$googleClientSecret" `
-            "GoogleCallbackUrl=$CallbackUrl"
+            "GoogleCallbackUrls=http://localhost:3000,$CallbackUrl"
     if ($LASTEXITCODE -ne 0) {
         throw "SAM deployment failed."
     }
